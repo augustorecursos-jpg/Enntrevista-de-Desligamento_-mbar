@@ -299,7 +299,7 @@ async function enviar(recusou) {
   enviando = true;
   palco.querySelectorAll('button').forEach(b => { b.disabled = true; });
   try {
-    await api('/api/desligamento', { method: 'POST', body: { c: token || undefined, identificacao, respostas, recusou } });
+    await api('/api/desligamento', { method: 'POST', body: { c: token || undefined, r: params.get('r') || undefined, identificacao, respostas, recusou } });
     agradecer(recusou
       ? 'Sua decisão foi registrada. Agradecemos por todo o tempo que esteve conosco e desejamos sucesso na sua nova jornada!'
       : 'Sua entrevista foi enviada. Agradecemos a sinceridade e todo o tempo que esteve conosco. Desejamos sucesso na sua nova jornada!');

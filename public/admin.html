@@ -46,7 +46,9 @@
         <span class="jl-ola" id="jl-ola">Olá! 👋</span>
         <h2>Que bom ter você aqui.</h2>
         <p class="jl-intro">Entre para cuidar da jornada das nossas pessoas.</p>
-        <label for="senha">Senha do RH</label>
+        <label for="usuario">E-mail</label>
+        <div class="jl-senha"><input id="usuario" type="text" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="seu.email@empresa.com" required></div>
+        <label for="senha">Senha</label>
         <div class="jl-senha">
           <input id="senha" type="password" autocomplete="current-password" placeholder="Digite sua senha" required>
           <button type="button" id="jl-ver" aria-label="Mostrar senha" title="Mostrar senha">👁</button>
@@ -54,7 +56,7 @@
         <p class="jl-caps" id="jl-caps" hidden>⇪ O Caps Lock está ativado</p>
         <p class="jl-erro" id="jl-erro" role="alert"></p>
         <button class="jl-entrar" type="submit"><span>Entrar na Jornada</span> <b aria-hidden="true">→</b></button>
-        <p class="jl-dica">🔒 Acesso exclusivo do time de RH. Esqueceu a senha? Fale com o responsável pela plataforma.</p>
+        <p class="jl-dica">🔒 Acesso exclusivo do time de RH. Esqueceu a senha? Peça ao administrador da Jornada para redefini-la.</p>
       </form>
       <div class="jl-processos">
         <span><img src="img/favicon-experiencia.svg" alt=""> Avaliação de Experiência</span>
@@ -70,14 +72,16 @@
     <p class="lateral-grupo">AVALIAÇÃO DE EXPERIÊNCIA</p>
     <button class="lateral-item" data-view="exp-acompanhar"><span class="ic">🌱</span>Acompanhar<span class="qtd" id="qtd-exp" hidden></span></button>
     <button class="lateral-item" data-view="exp-indicadores"><span class="ic">📈</span>Indicadores</button>
-    <button class="lateral-item" data-view="exp-formulario"><span class="ic">✏️</span>Formulário</button>
+    <button class="lateral-item" data-view="exp-formulario" data-so-admin><span class="ic">✏️</span>Formulário</button>
     <p class="lateral-grupo">ENTREVISTA DE DESLIGAMENTO</p>
     <button class="lateral-item" data-sub="enviar"><span class="ic">📤</span>Enviar</button>
     <button class="lateral-item" data-sub="indicadores"><span class="ic">📊</span>Indicadores</button>
     <button class="lateral-item" data-sub="respostas"><span class="ic">🗂</span>Respostas</button>
-    <button class="lateral-item" data-sub="formulario"><span class="ic">📝</span>Formulário</button>
+    <button class="lateral-item" data-sub="formulario" data-so-admin><span class="ic">📝</span>Formulário</button>
+    <p class="lateral-grupo" data-so-admin>ADMINISTRAÇÃO</p>
+    <button class="lateral-item" data-view="usuarios" data-so-admin><span class="ic">🔑</span>Usuários e acessos</button>
     <div class="lateral-rodape">
-      <a class="lateral-item" href="/api/admin/backup" title="Cópia completa do banco de dados"><span class="ic">💾</span>Backup</a>
+      <a class="lateral-item" href="/api/admin/backup" title="Cópia completa do banco de dados" data-so-admin><span class="ic">💾</span>Backup</a>
       <button class="lateral-item" id="sair"><span class="ic">⎋</span>Sair</button>
     </div>
   </aside>
@@ -90,6 +94,10 @@
         <strong id="barra-titulo">Área do RH</strong>
       </div>
       <div class="barra-usuario">
+        <button type="button" class="ja-eu" id="ja-eu" title="Minha conta">
+          <span class="ja-eu-av" id="ja-eu-av">RH</span>
+          <span class="ja-eu-txt"><strong id="ja-eu-nome">RH</strong><small id="ja-eu-papel"></small></span>
+        </button>
       </div>
     </header>
 
@@ -146,7 +154,7 @@
           </div>
         </div>
         <div class="cartao">
-          <h3>📥 Importar planilha de admissões <small>· Excel ou CSV com NOME, CHAPA, CARGO, SETOR, GESTOR, ADMISSAO (e, se quiser, TELEFONE GESTOR, EMAIL GESTOR, TELEFONE, EMAIL)</small></h3>
+          <h3>📥 Importar planilha de admissões <small>· Excel ou CSV com NOME, CHAPA, CARGO, SETOR, REGIONAL, GESTOR, ADMISSAO (e, se quiser, TELEFONE GESTOR, EMAIL GESTOR, TELEFONE, EMAIL). Para coordenadores, a regional é preenchida automaticamente</small></h3>
           <div class="importar">
             <input type="file" id="pes-arquivo" accept=".xlsx,.xls,.csv" class="campo">
             <button class="btn btn-laranja" id="pes-importar" disabled>Importar</button>
@@ -168,6 +176,7 @@
         <div class="ind-cab">
           <h1 class="titulo-pagina">Avaliação de <em>experiência</em></h1>
           <div class="filtros">
+            <select class="campo" id="kb-regional" aria-label="Regional" data-so-admin><option value="">Todas as regionais</option></select>
             <select class="campo" id="kb-periodo" aria-label="Período"><option value="">Todos os períodos</option><option value="1">1º período</option><option value="2">2º período</option></select>
             <select class="campo" id="kb-setor" aria-label="Setor"><option value="">Todos os setores</option></select>
             <select class="campo" id="kb-gestor" aria-label="Gestor"><option value="">Todos os gestores</option></select>
@@ -182,6 +191,7 @@
         <div class="ind-cab">
           <h1 class="titulo-pagina">Indicadores da <em>experiência</em></h1>
           <div class="filtros">
+            <select class="campo" id="xi-regional" aria-label="Regional" data-so-admin><option value="">Todas as regionais</option></select>
             <select class="campo" id="xi-periodo" aria-label="Período"><option value="">Todos os períodos</option><option value="1">1º período</option><option value="2">2º período</option></select>
             <select class="campo" id="xi-setor" aria-label="Setor"><option value="">Todos os setores</option></select>
             <select class="campo" id="xi-gestor" aria-label="Gestor"><option value="">Todos os gestores</option></select>
@@ -236,6 +246,41 @@
         </div>
       </form>
 
+      <!-- Usuários e acessos (somente admin) -->
+      <section data-view-painel="usuarios" hidden>
+        <div class="ind-cab">
+          <h1 class="titulo-pagina">Usuários e <em>acessos</em></h1>
+        </div>
+        <div class="us-grade">
+          <form class="cartao us-form" id="us-form">
+            <h3 id="us-form-tit">➕ Novo acesso</h3>
+            <p class="q-dica">Coordenadores de RH regionais enxergam somente as pessoas, avaliações de experiência e entrevistas de desligamento da própria regional. Administradores enxergam tudo e cuidam dos formulários e dos acessos.</p>
+            <div class="dsl-campos">
+              <label class="largo">Nome *<input class="campo" name="nome" required maxlength="200"></label>
+              <label class="largo">E-mail (login) *<input class="campo" name="email" type="email" required maxlength="200"></label>
+              <label>Perfil
+                <select class="campo" name="papel"><option value="regional">Coordenador(a) de RH regional</option><option value="admin">Administrador(a)</option></select></label>
+              <label data-us-regional>Regional *<input class="campo" name="regional" maxlength="100" list="lista-regionais" placeholder="Ex.: Centro-Oeste"></label>
+            </div>
+            <div class="linha-form">
+              <button class="btn btn-laranja" type="submit" id="us-salvar">Criar acesso</button>
+              <button class="btn btn-claro" type="button" id="us-cancelar" hidden>Cancelar edição</button>
+            </div>
+            <div id="us-credencial"></div>
+          </form>
+          <section class="cartao us-regionais">
+            <h3>🗺️ Visão por regional</h3>
+            <div class="tabela-wrap"><table class="tabela" id="us-regionais"></table></div>
+          </section>
+        </div>
+        <div class="cartao" style="margin-top:1.4rem">
+          <div class="cab-tabela"><h3>🔑 Acessos <small id="us-qtd"></small></h3>
+            <input class="campo busca" id="us-busca" placeholder="Buscar nome, e-mail, regional…"></div>
+          <div class="tabela-wrap"><table class="tabela" id="us-tabela"></table></div>
+          <p class="q-dica" style="margin-top:1rem">O acesso master continua sendo o usuário <strong>admin</strong> com a senha definida na hospedagem (ADMIN_PASSWORD).</p>
+        </div>
+      </section>
+
       <!-- Entrevista de desligamento -->
       <section data-painel="desligamento" hidden>
         <div class="ind-cab">
@@ -268,6 +313,7 @@
               <label>WhatsApp (com DDD)<input class="campo" name="telefone" inputmode="tel" placeholder="(65) 99999-0000" maxlength="40"></label>
               <label>E-mail pessoal<input class="campo" name="email" type="email" maxlength="200"></label>
               <label>Responsável RH pela entrevista<input class="campo" name="responsavel_rh" maxlength="200"></label>
+              <label data-so-admin>Regional<input class="campo" name="regional" maxlength="100" list="lista-regionais" placeholder="Ex.: Centro-Oeste"></label>
             </div>
             <datalist id="dsl-lista-cargos"></datalist><datalist id="dsl-lista-areas"></datalist><datalist id="dsl-lista-gestores"></datalist>
             <div class="linha-form"><button class="btn btn-laranja" type="submit">Gerar link individual</button></div>
@@ -294,6 +340,7 @@
             <div class="filtros" style="margin-left:0">
               <label class="filtro-data">Desligamento de <input class="campo" type="date" id="dsl-de"></label>
               <label class="filtro-data">até <input class="campo" type="date" id="dsl-ate"></label>
+              <select class="campo" id="dsl-f-regional" aria-label="Regional" data-so-admin><option value="">Todas as regionais</option></select>
               <select class="campo" id="dsl-f-area" aria-label="Área"><option value="">Todas as áreas</option></select>
               <select class="campo" id="dsl-f-gestor" aria-label="Gestor"><option value="">Todos os gestores</option></select>
             </div>
@@ -359,6 +406,26 @@
     </main>
   </div>
 
+  <datalist id="lista-regionais"></datalist>
+
+  <!-- Minha conta -->
+  <dialog class="modal modal-prova" id="modal-conta">
+    <form id="form-conta">
+      <header><div><small>JORNADA ÂMBAR · MINHA CONTA</small><h3 id="conta-titulo">Minha conta</h3></div>
+        <button type="button" class="btn btn-claro btn-sm" data-fechar aria-label="Fechar">✕</button></header>
+      <div class="prova-corpo">
+        <p class="conta-aviso" id="conta-aviso" hidden>👋 Este é seu primeiro acesso com a senha provisória. Crie uma senha só sua para continuar com segurança.</p>
+        <p class="q-dica" id="conta-info"></p>
+        <div class="dsl-campos" id="conta-campos">
+          <label class="largo">Senha atual<input class="campo" name="atual" type="password" autocomplete="current-password"></label>
+          <label>Nova senha <small>· mínimo 8 caracteres</small><input class="campo" name="nova" type="password" autocomplete="new-password" minlength="8"></label>
+          <label>Repita a nova senha<input class="campo" name="repete" type="password" autocomplete="new-password"></label>
+        </div>
+      </div>
+      <footer><button type="button" class="btn btn-claro" id="conta-sair">⎋ Sair da Jornada</button><button class="btn btn-laranja" type="submit" id="conta-salvar">Salvar nova senha</button></footer>
+    </form>
+  </dialog>
+
   <!-- Pessoa: cadastro/edição -->
   <dialog class="modal modal-prova" id="modal-pessoa">
     <form id="form-pessoa">
@@ -369,6 +436,7 @@
           <label class="largo">Nome completo *<input class="campo" name="nome" required maxlength="200"></label>
           <label>Chapa / matrícula<input class="campo" name="chapa" maxlength="60"></label>
           <label>Data de admissão *<input class="campo" name="admissao" type="date" required></label>
+          <label data-so-admin>Regional<input class="campo" name="regional" maxlength="100" list="lista-regionais" placeholder="Ex.: Centro-Oeste"></label>
           <label>Cargo<input class="campo" name="cargo" maxlength="200" list="lista-cargos"></label>
           <label>Setor<input class="campo" name="setor" maxlength="200" list="lista-setores"></label>
           <label>WhatsApp do colaborador<input class="campo" name="telefone" inputmode="tel" maxlength="40"></label>
@@ -434,6 +502,7 @@
   <script src="js/editor-formulario.js"></script>
   <script src="js/admin-desligamento.js"></script>
   <script src="js/admin-experiencia.js"></script>
+  <script src="js/admin-usuarios.js"></script>
   <script src="js/admin.js"></script>
 </body>
 </html>

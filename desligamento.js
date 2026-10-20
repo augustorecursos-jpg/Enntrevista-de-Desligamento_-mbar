@@ -46,6 +46,13 @@ db.exec(`
     criado_em     TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
+// Regional de cada convite e resposta: coordenadores de RH regionais só enxergam a própria.
+for (const tabela of ['desligamento_convites', 'desligamento_respostas']) {
+  if (!db.prepare(`PRAGMA table_info(${tabela})`).all().some(c => c.name === 'regional')) db.exec(`ALTER TABLE ${tabela} ADD COLUMN regional TEXT`);
+}
+/** Trecho SQL + parâmetros para limitar uma consulta à regional do usuário (escopo nulo = admin, vê tudo). */
+const filtroRegional = (escopo, coluna = 'regional') => (escopo ? { sql: `${coluna} = ?`, params: [escopo] } : { sql: '1 = 1', params: [] });
+const daRegional = (escopo, linha) => !escopo || (linha && linha.regional === escopo);
 
 /** Formulário inicial, transcrito do PRESI-RH-0002 (Entrevista de Desligamento, revisão 01). */
 function formularioPadrao() {
@@ -222,7 +229,7 @@ function statusConvite(conviteId) {
   return r ? { status: r.recusou ? 'recusou' : 'respondido', respondido_em: r.criado_em } : { status: 'pendente', respondido_em: null };
 }
 
-function registrar(app, { exigirAdmin, limitadorDeFalhas }) {
+function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
   // Limite de envios por IP pelo link geral (o link individual só aceita uma resposta).
   const limiteEnvios = limitadorDeFalhas({ maximo: 20, janelaMin: 15 });
 
@@ -263,11 +270,13 @@ function registrar(app, { exigirAdmin, limitadorDeFalhas }) {
       if (lidas.erro) return res.status(400).json({ erro: lidas.erro });
     }
     try {
+      // Regional: a do convite; no link geral, a que veio no link da regional (?r=).
+      const regional = convite ? (convite.regional || '') : texto(req.body?.r, 100);
       db.prepare(`INSERT INTO desligamento_respostas
-        (convite_id, nome, matricula, cargo, area, gestor, data_admissao, data_desligamento, responsavel_rh, recusou, alerta, respostas)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        (convite_id, nome, matricula, cargo, area, gestor, data_admissao, data_desligamento, responsavel_rh, recusou, alerta, respostas, regional)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .run(convite?.id ?? null, ident.nome, ident.matricula, ident.cargo, ident.area, ident.gestor, ident.data_admissao,
-          ident.data_desligamento, convite?.responsavel_rh || '', recusou ? 1 : 0, lidas.alerta ? 1 : 0, JSON.stringify(lidas.respostas));
+          ident.data_desligamento, convite?.responsavel_rh || '', recusou ? 1 : 0, lidas.alerta ? 1 : 0, JSON.stringify(lidas.respostas), regional);
     } catch (e) {
       if (/UNIQUE/.test(e.message)) return res.status(409).json({ erro: 'Esta entrevista já foi registrada. Obrigado!' });
       throw e;
@@ -279,17 +288,18 @@ function registrar(app, { exigirAdmin, limitadorDeFalhas }) {
   // ===== RH =====
 
   app.get('/api/admin/desligamento', exigirAdmin, (_req, res) => res.json(formulario()));
-  app.get('/api/admin/desligamento/padrao', exigirAdmin, (_req, res) => res.json(formularioPadrao()));
+  app.get('/api/admin/desligamento/padrao', exigirAdmin, exigirMaster, (_req, res) => res.json(formularioPadrao()));
 
-  app.put('/api/admin/desligamento', exigirAdmin, (req, res) => {
+  app.put('/api/admin/desligamento', exigirAdmin, exigirMaster, (req, res) => {
     const { form, erro } = lerFormulario(req.body);
     if (erro) return res.status(400).json({ erro });
     db.prepare('UPDATE configuracoes SET valor = ? WHERE chave = ?').run(JSON.stringify(form), CHAVE_FORM);
     res.json(form);
   });
 
-  app.get('/api/admin/desligamento/convites', exigirAdmin, (_req, res) => {
-    const convites = db.prepare('SELECT * FROM desligamento_convites ORDER BY id DESC').all().map(c => ({ ...c, ...statusConvite(c.id) }));
+  app.get('/api/admin/desligamento/convites', exigirAdmin, (req, res) => {
+    const f = filtroRegional(req.escopo);
+    const convites = db.prepare(`SELECT * FROM desligamento_convites WHERE ${f.sql} ORDER BY id DESC`).all(...f.params).map(c => ({ ...c, ...statusConvite(c.id) }));
     res.json(convites);
   });
 
@@ -298,31 +308,44 @@ function registrar(app, { exigirAdmin, limitadorDeFalhas }) {
     const c = {
       ...Object.fromEntries(IDENTIFICACAO.map(k => [k, k.startsWith('data_') ? dataValida(b[k]) : texto(b[k], 200)])),
       telefone: texto(b.telefone, 40), email: texto(b.email, 200), responsavel_rh: texto(b.responsavel_rh, 200),
+      // O coordenador regional cria sempre na própria regional; o admin escolhe.
+      regional: req.escopo || texto(b.regional, 100),
     };
     if (!c.nome) return res.status(400).json({ erro: 'Informe o nome do colaborador.' });
     const token = crypto.randomBytes(9).toString('base64url');
     const r = db.prepare(`INSERT INTO desligamento_convites
-      (token, nome, matricula, cargo, area, gestor, data_admissao, data_desligamento, telefone, email, responsavel_rh)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(token, c.nome, c.matricula, c.cargo, c.area, c.gestor, c.data_admissao, c.data_desligamento, c.telefone, c.email, c.responsavel_rh);
+      (token, nome, matricula, cargo, area, gestor, data_admissao, data_desligamento, telefone, email, responsavel_rh, regional)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(token, c.nome, c.matricula, c.cargo, c.area, c.gestor, c.data_admissao, c.data_desligamento, c.telefone, c.email, c.responsavel_rh, c.regional);
     res.json({ id: Number(r.lastInsertRowid), token });
   });
 
   app.delete('/api/admin/desligamento/convites/:id', exigirAdmin, (req, res) => {
+    const c = db.prepare('SELECT regional FROM desligamento_convites WHERE id = ?').get(Number(req.params.id));
+    if (!daRegional(req.escopo, c)) return res.status(403).json({ erro: 'Este convite é de outra regional.' });
     db.prepare('DELETE FROM desligamento_convites WHERE id = ?').run(Number(req.params.id));
     res.json({ ok: true });
   });
 
-  app.get('/api/admin/desligamento/respostas', exigirAdmin, (_req, res) => {
+  app.get('/api/admin/desligamento/respostas', exigirAdmin, (req, res) => {
+    const f = filtroRegional(req.escopo, 'r.regional');
     const linhas = db.prepare(`
       SELECT r.*, c.telefone, c.email FROM desligamento_respostas r
-      LEFT JOIN desligamento_convites c ON c.id = r.convite_id ORDER BY r.criado_em DESC, r.id DESC`).all()
+      LEFT JOIN desligamento_convites c ON c.id = r.convite_id WHERE ${f.sql} ORDER BY r.criado_em DESC, r.id DESC`).all(...f.params)
       .map(r => ({ ...r, respostas: JSON.parse(r.respostas) }));
     res.json(linhas);
   });
 
   app.delete('/api/admin/desligamento/respostas/:id', exigirAdmin, (req, res) => {
+    const r = db.prepare('SELECT regional FROM desligamento_respostas WHERE id = ?').get(Number(req.params.id));
+    if (!daRegional(req.escopo, r)) return res.status(403).json({ erro: 'Esta entrevista é de outra regional.' });
     db.prepare('DELETE FROM desligamento_respostas WHERE id = ?').run(Number(req.params.id));
+    res.json({ ok: true });
+  });
+
+  // Admin: define a regional de uma resposta que chegou pelo link geral sem regional.
+  app.patch('/api/admin/desligamento/respostas/:id', exigirAdmin, exigirMaster, (req, res) => {
+    db.prepare('UPDATE desligamento_respostas SET regional = ? WHERE id = ?').run(texto(req.body?.regional, 100), Number(req.params.id));
     res.json({ ok: true });
   });
 
@@ -331,10 +354,14 @@ function registrar(app, { exigirAdmin, limitadorDeFalhas }) {
     let link = `${req.protocol}://${req.get('host')}/desligamento.html`;
     let titulo = 'Link geral';
     if (req.query.c) {
-      const c = db.prepare('SELECT nome, token FROM desligamento_convites WHERE token = ?').get(String(req.query.c));
-      if (!c) return res.status(404).json({ erro: 'Convite não encontrado' });
+      const c = db.prepare('SELECT nome, token, regional FROM desligamento_convites WHERE token = ?').get(String(req.query.c));
+      if (!c || !daRegional(req.escopo, c)) return res.status(404).json({ erro: 'Convite não encontrado' });
       link += `?c=${c.token}`;
       titulo = c.nome;
+    } else {
+      // Link geral da regional: as respostas chegam já marcadas com a regional.
+      const r = req.escopo || texto(req.query.r, 100);
+      if (r) { link += `?r=${encodeURIComponent(r)}`; titulo = `Link geral · ${r}`; }
     }
     try {
       const opcoes = { margin: 2, width: 600, color: { dark: '#0e3b5c', light: '#ffffff' } };

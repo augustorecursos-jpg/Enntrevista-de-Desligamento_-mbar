@@ -52,9 +52,29 @@ function lerCookies(req) {
   return out;
 }
 
+const usuarios = require('./usuarios');
+
+/**
+ * Exige sessão do RH e coloca em req.usuario quem está acessando: o admin master (ADMIN_PASSWORD),
+ * um administrador ou um coordenador regional. Usuários cadastrados são relidos a cada pedido, então
+ * desativar alguém ou mudar a regional vale na hora.
+ */
 function exigirAdmin(req, res, next) {
   const s = verificar(lerCookies(req).sess_admin);
-  if (!s || !s.admin) return res.status(401).json({ erro: 'Acesso restrito ao RH.' });
+  if (s?.master) req.usuario = { id: null, nome: 'Administrador', email: 'admin', papel: 'admin', regional: '', master: true };
+  else if (s?.uid) {
+    const u = usuarios.buscar(s.uid);
+    if (u) req.usuario = { id: u.id, nome: u.nome, email: u.email, papel: u.papel, regional: u.regional || '', trocar_senha: Boolean(u.trocar_senha) };
+  }
+  if (!req.usuario) return res.status(401).json({ erro: 'Sessão expirada. Entre novamente.' });
+  // Regional que limita o que a pessoa enxerga (null = tudo).
+  req.escopo = req.usuario.papel === 'admin' ? null : req.usuario.regional;
+  next();
+}
+
+/** Somente administradores: formulários, usuários e backup. */
+function exigirMaster(req, res, next) {
+  if (req.usuario?.papel !== 'admin') return res.status(403).json({ erro: 'Somente o administrador pode fazer isso.' });
   next();
 }
 
@@ -101,12 +121,22 @@ app.get('/healthz', (_req, res) => {
 
 app.post('/api/admin/entrar', (req, res) => {
   if (limiteAdmin.bloqueado(req)) return res.status(429).json({ erro: 'Muitas tentativas seguidas. Aguarde alguns minutos.' });
-  const a = Buffer.from(String(req.body?.senha || '')), b = Buffer.from(ADMIN_PASSWORD);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-    limiteAdmin.registrar(req);
-    return res.status(401).json({ erro: 'Senha incorreta.' });
+  const login = String(req.body?.usuario || '').trim();
+  const senha = String(req.body?.senha || '');
+  let payload = null;
+  if (!login || login.toLowerCase() === 'admin') {
+    // Admin master: usuário "admin" (ou em branco) com a senha definida na hospedagem.
+    const a = Buffer.from(senha), b = Buffer.from(ADMIN_PASSWORD);
+    if (a.length === b.length && crypto.timingSafeEqual(a, b)) payload = { master: true };
+  } else {
+    const u = usuarios.autenticar(login, senha);
+    if (u) payload = { uid: u.id };
   }
-  res.cookie('sess_admin', assinar({ admin: true, exp: Date.now() + 8 * 3600e3 }), { httpOnly: true, sameSite: 'lax', maxAge: 8 * 3600e3, secure: PRODUCAO });
+  if (!payload) {
+    limiteAdmin.registrar(req);
+    return res.status(401).json({ erro: 'Usuário ou senha incorretos.' });
+  }
+  res.cookie('sess_admin', assinar({ ...payload, exp: Date.now() + 8 * 3600e3 }), { httpOnly: true, sameSite: 'lax', maxAge: 8 * 3600e3, secure: PRODUCAO });
   res.json({ ok: true });
 });
 
@@ -115,16 +145,25 @@ app.post('/api/admin/sair', (_req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/admin/sessao', exigirAdmin, (_req, res) => res.json({ ok: true }));
+app.get('/api/admin/sessao', exigirAdmin, (req, res) => {
+  // Regionais já usadas no sistema (para os campos de regional do admin).
+  const regionais = [...new Set(db.prepare(`
+    SELECT regional FROM usuarios UNION SELECT regional FROM pessoas UNION SELECT regional FROM desligamento_convites`).all()
+    .map(r => r.regional).filter(Boolean))].sort();
+  res.json({ ...req.usuario, regionais: req.escopo ? [req.escopo] : regionais });
+});
+
+// Usuários: admins e coordenadores de RH regionais.
+usuarios.registrar(app, { exigirAdmin, exigirMaster });
 
 // Entrevista: formulário, convites, respostas e QR Code.
-require('./desligamento').registrar(app, { exigirAdmin, limitadorDeFalhas });
+require('./desligamento').registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas });
 
 // Avaliação de experiência: pessoas, avaliação do gestor, ciência do colaborador e QR Code.
-require('./experiencia').registrar(app, { exigirAdmin, limitadorDeFalhas });
+require('./experiencia').registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas });
 
 // Cópia completa do banco (formulário, convites e respostas).
-app.get('/api/admin/backup', exigirAdmin, (_req, res) => {
+app.get('/api/admin/backup', exigirAdmin, exigirMaster, (_req, res) => {
   const arquivo = path.join(DATA_DIR, `backup-${Date.now()}.db`);
   db.exec(`VACUUM INTO '${arquivo.replace(/'/g, "''")}'`);
   res.download(arquivo, `desligamento-backup-${new Date().toISOString().slice(0, 10)}.db`, () => fs.rm(arquivo, { force: true }, () => {}));

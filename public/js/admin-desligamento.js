@@ -25,7 +25,8 @@ function dslEscala(opcoes) {
 }
 const dslPositiva = (escala, valor) => escala.indexOf(valor) > -1 && escala.indexOf(valor) < escala.length / 2;
 
-const dslLink = (token) => `${location.origin}/desligamento.html${token ? `?c=${token}` : ''}`;
+// Link individual (?c=) ou geral; o link geral do coordenador regional já leva a regional (?r=).
+const dslLink = (token) => `${location.origin}/desligamento.html${token ? `?c=${token}` : (jaUsuario?.regional ? `?r=${encodeURIComponent(jaUsuario.regional)}` : '')}`;
 const dslPrimeiroNome = (n) => String(n || '').trim().split(/\s+/)[0] || '';
 function dslMensagem(nome, link) {
   let m = dsl.form?.mensagem || '{link}';
@@ -108,12 +109,12 @@ function dslRenderEnviar() {
   const pend = dsl.convites.filter(c => c.status === 'pendente').length;
   document.getElementById('dsl-qtd-convites').textContent = `· ${dsl.convites.length} convite(s) · ${pend} aguardando resposta`;
   document.getElementById('dsl-convites').innerHTML = `
-    <tr><th>Colaborador</th><th>Área</th><th>Desligamento</th><th>Situação</th><th>Enviar / reenviar</th><th></th></tr>
+    <tr><th>Colaborador</th><th>Área${ehAdmin() ? ' / regional' : ''}</th><th>Desligamento</th><th>Situação</th><th>Enviar / reenviar</th><th></th></tr>
     ${lista.map(c => {
       const [rot, cls] = DSL_STATUS[c.status];
       return `<tr>
         <td><strong>${esc(c.nome)}</strong><small class="sub">${esc([c.cargo, c.matricula && 'Mat. ' + c.matricula].filter(Boolean).join(' · '))}</small></td>
-        <td>${esc(c.area || '–')}</td><td>${dslData(c.data_desligamento)}</td>
+        <td>${esc(c.area || '–')}${ehAdmin() ? `<small class="sub">${esc(c.regional || 'sem regional')}</small>` : ''}</td><td>${dslData(c.data_desligamento)}</td>
         <td><span class="selo-st ${cls}">${rot}</span>${c.respondido_em ? `<small class="sub">${dslDataHora(c.respondido_em)}</small>` : ''}</td>
         <td><div class="acoes-envio">${dslBotoesEnvio(c)}</div></td>
         <td><button type="button" class="q-rem" data-rem-convite="${c.id}" title="Excluir convite">🗑</button></td>
@@ -218,8 +219,9 @@ function dslFiltrar(lista) {
   const ate = document.getElementById('dsl-ate').value;
   const area = document.getElementById('dsl-f-area').value;
   const gestor = document.getElementById('dsl-f-gestor').value;
+  const regional = document.getElementById('dsl-f-regional').value;
   return lista.filter(r => (!de || dslRef(r) >= de) && (!ate || dslRef(r) <= ate)
-    && (!area || r.area === area) && (!gestor || r.gestor === gestor));
+    && (!area || r.area === area) && (!gestor || r.gestor === gestor) && (!regional || (r.regional || '') === regional));
 }
 
 function dslPreencherSelect(id, valores, rotulo) {
@@ -246,6 +248,7 @@ const dslRotuloCurto = (t) => {
 
 function dslRenderIndicadores() {
   const todos = dsl.respostas;
+  dslPreencherSelect('dsl-f-regional', [...new Set([...todos, ...dsl.convites].map(r => r.regional).filter(Boolean))].sort(), 'Todas as regionais');
   dslPreencherSelect('dsl-f-area', [...new Set(todos.map(r => r.area).filter(Boolean))].sort(), 'Todas as áreas');
   dslPreencherSelect('dsl-f-gestor', [...new Set(todos.map(r => r.gestor).filter(Boolean))].sort(), 'Todos os gestores');
   const filtradas = dslFiltrar(todos);
@@ -325,7 +328,7 @@ function dslRenderIndicadores() {
 
   dslResultadosPorPergunta(resp, perguntas);
 }
-['dsl-de', 'dsl-ate', 'dsl-f-area', 'dsl-f-gestor'].forEach(id => document.getElementById(id).addEventListener('change', dslRenderIndicadores));
+['dsl-de', 'dsl-ate', 'dsl-f-regional', 'dsl-f-area', 'dsl-f-gestor'].forEach(id => document.getElementById(id).addEventListener('change', dslRenderIndicadores));
 
 function dslColunasMeses(resp) {
   const fim = document.getElementById('dsl-ate').value || new Date().toISOString().slice(0, 10);
@@ -406,7 +409,7 @@ function dslRenderRespostas() {
     ${lista.map(r => `<tr>
       <td>${dslDataHora(r.criado_em)}<small class="sub">${r.convite_id ? 'Convite individual' : 'Link geral'}</small></td>
       <td><strong>${esc(r.nome)}</strong><small class="sub">${esc([r.cargo, r.matricula && 'Mat. ' + r.matricula].filter(Boolean).join(' · '))}</small></td>
-      <td>${esc(r.area || '–')}</td><td>${esc(r.gestor || '–')}</td><td>${dslData(r.data_desligamento)}</td>
+      <td>${esc(r.area || '–')}${ehAdmin() ? `<small class="sub">${esc(r.regional || 'sem regional')}</small>` : ''}</td><td>${esc(r.gestor || '–')}</td><td>${dslData(r.data_desligamento)}</td>
       <td>${r.recusou ? '<span class="selo-st st-recusa">Recusou</span>' : '<span class="selo-st st-ok">Respondida</span>'}${r.alerta ? ' <span class="selo-st st-alerta" title="Há uma resposta marcada como alerta">⚠️ Alerta</span>' : ''}</td>
       <td class="acoes-envio">${r.recusou ? '' : `<button type="button" class="btn btn-claro btn-sm" data-ver-resp="${r.id}">Ver</button>`}
         <button type="button" class="q-rem" data-rem-resp="${r.id}" title="Excluir">🗑</button></td>
@@ -472,7 +475,7 @@ function dslExportar() {
   const curto = (t) => (t.length > 60 ? `${t.slice(0, 57)}…` : t);
 
   // Aba 1: uma linha por entrevista, uma coluna por pergunta (múltipla seleção também ganha uma coluna 0/1 por opção).
-  const cab = ['ID', 'Recebida em', 'Situação', 'Origem', 'Nome', 'Matrícula', 'Cargo', 'Área / Diretoria', 'Gestor imediato',
+  const cab = ['ID', 'Recebida em', 'Situação', 'Origem', 'Nome', 'Matrícula', 'Cargo', 'Regional', 'Área / Diretoria', 'Gestor imediato',
     'Data de admissão', 'Data de desligamento', 'Mês do desligamento', 'Tempo de casa (meses)', 'Responsável RH', 'Alerta'];
   const colunas = [];
   const col = (titulo, p, f) => colunas.push({ titulo, p, f });
@@ -489,7 +492,7 @@ function dslExportar() {
   }
   const linhas = dsl.respostas.map(r => [
     r.id, new Date(r.criado_em.replace(' ', 'T') + 'Z'), r.recusou ? 'Recusou' : 'Respondida', r.convite_id ? 'Convite individual' : 'Link geral',
-    r.nome, r.matricula, r.cargo, r.area, r.gestor, dataCel(r.data_admissao), dataCel(r.data_desligamento), dslRef(r).slice(0, 7),
+    r.nome, r.matricula, r.cargo, r.regional || '', r.area, r.gestor, dataCel(r.data_admissao), dataCel(r.data_desligamento), dslRef(r).slice(0, 7),
     dslMeses(r.data_admissao, r.data_desligamento) ?? '', r.responsavel_rh, r.alerta ? 'Sim' : 'Não',
     ...colunas.map(c => c.f(dslResp(r, c.p.id), r)),
   ]);

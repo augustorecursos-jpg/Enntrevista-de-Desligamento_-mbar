@@ -166,3 +166,24 @@
   .jl-acesso { justify-content: flex-start; padding-top: 2rem; }
 }
 @media (prefers-reduced-motion: reduce) { .jl-trilha { animation: none; stroke-dashoffset: 0; } .jl-marco { animation: none; opacity: 1; } }
+
+/* ---------- Perfis e usuários ---------- */
+body.papel-regional [data-so-admin] { display: none !important; }
+.ja-eu { display: flex; align-items: center; gap: .6rem; padding: .3rem .8rem .3rem .3rem; border-radius: 999px; border: 1px solid var(--linha); background: #fff; text-align: left; transition: border-color .15s; }
+.ja-eu:hover { border-color: var(--marinho); }
+.ja-eu-av { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--marinho); color: #fff; font-weight: 800; font-size: .8rem; border: 2px solid var(--laranja); }
+.ja-eu-txt strong { display: block; color: var(--marinho); font-size: .88rem; line-height: 1.2; }
+.ja-eu-txt small { display: block; color: var(--texto-suave); font-size: .74rem; }
+.conta-aviso { margin: 0 0 1rem; padding: .8rem 1rem; border-radius: 12px; background: var(--laranja-suave); color: #9a4310; font-weight: 700; }
+#modal-conta { max-width: 560px; }
+.us-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.4rem; align-items: start; }
+.us-av { display: inline-grid; place-items: center; width: 34px; height: 34px; margin-right: .6rem; float: left; border-radius: 50%; background: var(--laranja-suave); color: #b54d12; font-weight: 800; font-size: .76rem; }
+.us-cred { margin-top: 1.2rem; padding: 1.1rem 1.2rem; border-radius: 14px; background: linear-gradient(140deg, #0e3b5c, #0a2c45); color: #fff; display: grid; gap: .7rem; }
+.us-cred-tit { margin: 0; font-weight: 800; font-family: var(--fonte-titulo); }
+.us-cred dl { margin: 0; display: grid; gap: .5rem; }
+.us-cred dt { font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: #9fb6c8; }
+.us-cred dd { margin: .1rem 0 0; font-weight: 700; word-break: break-all; }
+.us-cred .us-senha { display: inline-block; padding: .3rem .7rem; border-radius: 8px; background: rgba(255, 255, 255, .1); font-family: ui-monospace, Consolas, monospace; font-size: 1.05rem; letter-spacing: .04em; color: var(--laranja-claro); }
+.us-cred .q-dica { color: #b9cddd; margin: 0; }
+.us-cred .btn-claro { background: rgba(255, 255, 255, .1); color: #fff; border-color: rgba(255, 255, 255, .25); }
+@media (max-width: 1000px) { .us-grade { grid-template-columns: 1fr; } .ja-eu-txt { display: none; } .ja-eu { padding: .2rem; } }

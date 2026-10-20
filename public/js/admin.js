@@ -4,19 +4,35 @@ const fmtPct = (n) => (n == null ? '–' : `${fmt(n, Number.isInteger(n) ? 0 : 1
 const num = (n, casas = 2) => String(Math.round(n * 10 ** casas) / 10 ** casas).replace('.', ',');
 
 // ---------- Sessão ----------
+// Quem está usando: { nome, email, papel: 'admin' | 'regional', regional, master, trocar_senha, regionais }
+let jaUsuario = null;
+const ehAdmin = () => jaUsuario?.papel === 'admin';
+
 async function iniciar() {
   try {
-    await api('/api/admin/sessao');
+    jaUsuario = await api('/api/admin/sessao');
     mostrarPainel();
   } catch { /* fica na tela de login */ }
+}
+
+/** Ajusta a tela ao perfil: coordenador regional não vê formulários, usuários nem backup. */
+function aplicarPerfil() {
+  document.body.classList.toggle('papel-regional', !ehAdmin());
+  document.getElementById('lista-regionais').innerHTML = (jaUsuario.regionais || []).map(r => `<option value="${esc(r)}">`).join('');
+  const iniciais = jaUsuario.nome.split(/\s+/).filter(Boolean).map((p, i, a) => (i === 0 || i === a.length - 1 ? p[0] : '')).join('').toUpperCase();
+  document.getElementById('ja-eu-av').textContent = iniciais || 'RH';
+  document.getElementById('ja-eu-nome').textContent = jaUsuario.nome;
+  document.getElementById('ja-eu-papel').textContent = jaUsuario.master ? 'Admin master' : ehAdmin() ? 'Administrador(a)' : `RH · ${jaUsuario.regional}`;
 }
 
 async function mostrarPainel() {
   document.getElementById('tela-login').hidden = true;
   document.getElementById('lateral').hidden = false;
   document.getElementById('principal').hidden = false;
+  aplicarPerfil();
   await Promise.all([carregarDesligamento(), xpCarregar()]);
   irPara(location.hash.slice(1) || 'inicio');
+  if (jaUsuario.trocar_senha) abrirConta(true);
 }
 
 // ---------- Navegação ----------
@@ -26,13 +42,16 @@ const VISOES = {
   'exp-acompanhar': ['Avaliação de experiência', () => renderKanban()],
   'exp-indicadores': ['Avaliação de experiência · Indicadores', () => renderXpIndicadores()],
   'exp-formulario': ['Avaliação de experiência · Formulário', () => renderXpFormulario()],
+  usuarios: ['Usuários e acessos', () => renderUsuarios()],
 };
+const SO_ADMIN = ['exp-formulario', 'usuarios', 'dsl-formulario'];
 const SUBS_DSL = { enviar: 'Enviar', indicadores: 'Indicadores', respostas: 'Respostas', formulario: 'Formulário' };
 let visaoAtual = 'inicio';
 
 function irPara(visao) {
   const sub = visao.startsWith('dsl-') ? visao.slice(4) : null;
   if (sub ? !SUBS_DSL[sub] : !VISOES[visao]) visao = 'inicio';
+  if (!ehAdmin() && SO_ADMIN.includes(visao)) visao = 'inicio';
   visaoAtual = visao;
   history.replaceState(null, '', `#${visaoAtual}`);
   const ehDsl = Boolean(sub && SUBS_DSL[sub]);
@@ -84,15 +103,17 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.currentTarget;
   const btn = form.querySelector('.jl-entrar');
+  if (!document.getElementById('usuario').value.trim()) { jlErro.textContent = 'Digite seu e-mail para entrar.'; document.getElementById('usuario').focus(); return; }
   if (!jlSenha.value) { jlErro.textContent = 'Digite a senha para entrar.'; jlSenha.focus(); return; }
   btn.disabled = true;
   btn.querySelector('span').textContent = 'Entrando…';
   try {
-    await api('/api/admin/entrar', { method: 'POST', body: { senha: jlSenha.value } });
+    await api('/api/admin/entrar', { method: 'POST', body: { usuario: document.getElementById('usuario').value.trim(), senha: jlSenha.value } });
+    jaUsuario = await api('/api/admin/sessao');
     document.getElementById('tela-login').classList.add('saindo');
     setTimeout(mostrarPainel, 350);
   } catch (err) {
-    jlErro.textContent = err.status === 401 ? 'Senha incorreta. Confira e tente de novo.' : err.message;
+    jlErro.textContent = err.status === 401 ? 'E-mail ou senha incorretos. Confira e tente de novo.' : err.message;
     jlSenha.closest('.jl-senha').classList.add('erro');
     form.classList.remove('treme'); void form.offsetWidth; form.classList.add('treme');
     jlSenha.select();

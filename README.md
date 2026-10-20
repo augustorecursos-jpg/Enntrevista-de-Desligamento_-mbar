@@ -13,7 +13,7 @@ Tudo é editável pelo RH (perguntas, prazos e mensagens) e exporta para Excel.
 
 | Endereço | Para quem | O que faz |
 |---|---|---|
-| `/admin.html` (ou `/`) | RH (senha) | Início, Pessoas, Avaliação de Experiência e Entrevista de Desligamento |
+| `/admin.html` (ou `/`) | RH (e-mail e senha; master: `admin`) | Início, Pessoas, Avaliação de Experiência e Entrevista de Desligamento |
 | `/avaliacao.html?t=<código>` | Gestor | Avaliação de experiência de um colaborador (1º ou 2º período) |
 | `/ciencia.html?t=<código>` | Colaborador | Lê a avaliação e registra a ciência (substitui a assinatura em papel) |
 | `/avaliacao.html?previa=1` | RH | Pré-visualização do formulário de experiência |
@@ -40,7 +40,17 @@ Tudo é editável pelo RH (perguntas, prazos e mensagens) e exporta para Excel.
   - *Formulário*: competências e perguntas editáveis, duração dos períodos, antecedência e mensagens ao gestor e ao
     colaborador (`{gestor}`, `{nome}`, `{periodo}`, `{vencimento}`, `{prazo}`, `{link}`). O parecer final é fixo.
 - **Entrevista de Desligamento**: Enviar, Indicadores, Respostas e Formulário (como antes).
-- **Backup**: baixa uma cópia completa do banco.
+- **Usuários e acessos** (somente administradores): cria acessos para **coordenadores de RH regionais** e outros
+  administradores. O login é o e-mail; a plataforma gera uma **senha provisória** (com botões para enviar por WhatsApp,
+  e-mail ou copiar) e pede a troca no primeiro acesso. Dá para editar, gerar nova senha, desativar e excluir. A
+  **visão por regional** mostra quem coordena cada regional e o que está em andamento.
+- **Perfis**:
+  - *Admin master*: usuário **admin** com a senha `ADMIN_PASSWORD` da hospedagem. Vê tudo e gerencia os acessos.
+  - *Administrador(a)*: vê todas as regionais, edita formulários e acessos.
+  - *Coordenador(a) de RH regional*: vê e cadastra somente pessoas, avaliações de experiência e entrevistas de
+    desligamento da própria regional (o servidor bloqueia o restante). Não vê formulários, usuários nem backup.
+    O "link geral" da entrevista de desligamento dele já marca a regional (`?r=<regional>`).
+- **Backup**: baixa uma cópia completa do banco (somente administradores).
 
 ## Publicar no Render (passo a passo)
 
