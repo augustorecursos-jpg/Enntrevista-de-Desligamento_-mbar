@@ -1,0 +1,98 @@
+/* Jornada Âmbar · área do RH: início com os processos, quadro de acompanhamento e ficha com linha do tempo */
+
+/* Início */
+.ja-boas small { font-family: var(--fonte-titulo); font-size: .72rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--laranja); }
+.ja-boas .titulo-pagina { font-size: clamp(1.7rem, 3vw, 2.3rem); margin: .3rem 0 .3rem; }
+.ja-boas p { margin: 0 0 1.4rem; color: var(--texto-suave); }
+.ja-processos { display: grid; grid-template-columns: 1fr 1fr minmax(220px, .7fr); gap: 1.2rem; }
+.ja-processo { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: .6rem; padding: 1.5rem; border-radius: 18px; background: #fff; border: 1px solid var(--linha); }
+.ja-processo::after { content: ''; position: absolute; right: -50px; top: -50px; width: 160px; height: 160px; border-radius: 50%; pointer-events: none; }
+.ja-exp { border-top: 4px solid var(--laranja); }
+.ja-exp::after { background: radial-gradient(circle, rgba(243, 154, 74, .25), transparent 65%); }
+.ja-dsl { border-top: 4px solid var(--marinho); }
+.ja-dsl::after { background: radial-gradient(circle, rgba(14, 59, 92, .15), transparent 65%); }
+.ja-breve { background: transparent; border: 2px dashed var(--linha); color: var(--texto-suave); }
+.ja-ic { font-size: 1.8rem; }
+.ja-processo h2 { font-size: 1.2rem; }
+.ja-processo p { margin: 0; color: var(--texto-suave); font-size: .9rem; line-height: 1.5; }
+.ja-nums { list-style: none; margin: .4rem 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: .5rem; }
+.ja-nums li { padding: .6rem .7rem; border-radius: 12px; background: var(--fundo); }
+.ja-nums strong { display: block; font-family: var(--fonte-titulo); font-size: 1.5rem; color: var(--marinho); line-height: 1.1; }
+.ja-nums span { font-size: .74rem; color: var(--texto-suave); }
+.ja-nums li.alerta { background: #fdeceb; }
+.ja-nums li.alerta strong { color: var(--vermelho); }
+.ja-acoes { margin-top: auto; display: flex; gap: .5rem; flex-wrap: wrap; position: relative; z-index: 1; }
+.ja-agenda { display: grid; gap: .5rem; }
+.ja-item { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding: .7rem .8rem; border-radius: 12px; border: 1px solid var(--linha); }
+.ja-dia { width: 52px; flex-shrink: 0; text-align: center; border-radius: 10px; padding: .3rem 0; font-size: .7rem; text-transform: uppercase; font-weight: 700; }
+.ja-dia b { display: block; font-family: var(--fonte-titulo); font-size: 1.3rem; line-height: 1.1; }
+.ja-dia.ok { background: #e3f4ea; color: #157a42; }
+.ja-dia.perto { background: var(--laranja-suave); color: #b54d12; }
+.ja-dia.atrasado { background: #fdeceb; color: var(--vermelho); }
+.ja-item-txt { flex: 1; min-width: 200px; }
+.ja-item-txt strong { display: block; color: var(--marinho); }
+.ja-item-txt small { color: var(--texto-suave); font-size: .8rem; }
+.st-gestor { background: #e6eef5; color: var(--marinho); }
+
+/* Quadro de acompanhamento */
+.kanban { display: grid; grid-template-columns: repeat(4, minmax(240px, 1fr)); gap: 1rem; align-items: start; overflow-x: auto; padding-bottom: .6rem; }
+.kb-col { background: var(--fundo-2); border-radius: 16px; padding: .8rem; min-height: 200px; }
+.kb-col > header { display: grid; grid-template-columns: 1fr auto; padding: .2rem .3rem .8rem; }
+.kb-col h3 { font-size: .9rem; }
+.kb-col header small { grid-column: 1 / -1; font-size: .74rem; color: var(--texto-suave); }
+.kb-qtd { min-width: 26px; height: 22px; padding: 0 8px; border-radius: 999px; display: grid; place-items: center; font-size: .74rem; font-weight: 800; background: #fff; color: var(--marinho); }
+.kb-a_enviar header h3::before { content: '● '; color: var(--cinza-arte); }
+.kb-com_gestor header h3::before { content: '● '; color: var(--marinho-2); }
+.kb-aguardando_ciencia header h3::before { content: '● '; color: var(--laranja); }
+.kb-concluida header h3::before { content: '● '; color: var(--verde); }
+.kb-cards { display: grid; gap: .6rem; }
+.kb-vazio { margin: .5rem; font-size: .8rem; color: var(--texto-suave); text-align: center; }
+.kb-card { background: #fff; border-radius: 12px; padding: .8rem; border: 1px solid var(--linha); box-shadow: 0 1px 2px rgba(14, 59, 92, .05); display: grid; gap: .45rem; }
+.kb-card.kb-alerta { border-left: 4px solid var(--vermelho); }
+.kb-topo { display: flex; gap: .6rem; align-items: flex-start; }
+.kb-topo > div { flex: 1; min-width: 0; }
+.kb-topo strong { display: block; color: var(--marinho); font-size: .92rem; line-height: 1.25; }
+.kb-topo small { display: block; color: var(--texto-suave); font-size: .74rem; }
+.kb-periodo { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--laranja-suave); color: #b54d12; font-weight: 800; font-size: .76rem; }
+.kb-gestor, .kb-nota, .kb-prazo, .kb-decisao, .kb-flag { margin: 0; font-size: .78rem; color: var(--texto-suave); }
+.kb-prazo { font-weight: 700; padding: .3rem .5rem; border-radius: 8px; }
+.kb-prazo.ok { background: #e3f4ea; color: #157a42; }
+.kb-prazo.perto { background: var(--laranja-suave); color: #b54d12; }
+.kb-prazo.atrasado { background: #fdeceb; color: var(--vermelho); }
+.kb-flag { color: var(--vermelho); font-weight: 700; }
+.kb-card .acoes-envio .btn-sm { padding: .3rem .5rem; font-size: .78rem; }
+.kb-ver { justify-self: start; border: 0; background: none; padding: 0; color: var(--laranja); font-weight: 700; font-size: .82rem; }
+.kb-menu { position: relative; }
+.kb-menu summary { list-style: none; cursor: pointer; width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: var(--texto-suave); font-weight: 800; }
+.kb-menu summary::-webkit-details-marker { display: none; }
+.kb-menu summary:hover { background: var(--fundo); }
+.kb-menu > div { position: absolute; right: 0; top: 30px; z-index: 5; min-width: 200px; display: grid; padding: .3rem; border-radius: 10px; background: #fff; border: 1px solid var(--linha); box-shadow: var(--sombra); }
+.kb-menu button { border: 0; background: none; text-align: left; padding: .5rem .6rem; border-radius: 6px; font-size: .84rem; color: var(--texto); }
+.kb-menu button:hover { background: var(--fundo); }
+
+/* Ficha com linha do tempo */
+.ficha-topo { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding-bottom: 1rem; border-bottom: 1px solid var(--linha); }
+.ficha-topo > div { flex: 1; min-width: 200px; }
+.ficha-topo strong { display: block; font-family: var(--fonte-titulo); color: var(--marinho); font-size: 1.1rem; }
+.ficha-topo small { display: block; color: var(--texto-suave); font-size: .82rem; }
+.ficha-topo .xp-avatar { color: #fff; }
+.ficha-acoes { display: flex; gap: .4rem; }
+.tl { list-style: none; margin: 1rem 0 0; padding: 0; position: relative; }
+.tl::before { content: ''; position: absolute; left: 19px; top: 10px; bottom: 10px; width: 2px; background: var(--linha); }
+.tl-etapa { position: relative; display: flex; gap: 1rem; padding: .6rem 0 1rem; }
+.tl-ic { position: relative; z-index: 1; width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 2px solid var(--linha); font-size: 1.1rem; }
+.tl-etapa.feita .tl-ic { border-color: var(--verde); }
+.tl-etapa.atual .tl-ic { border-color: var(--laranja); box-shadow: 0 0 0 4px var(--laranja-suave); }
+.tl-etapa.atrasada .tl-ic { border-color: var(--vermelho); box-shadow: 0 0 0 4px #fdeceb; }
+.tl-etapa.dispensada, .tl-etapa.futura { opacity: .75; }
+.tl-etapa > div { flex: 1; display: grid; gap: .4rem; align-content: start; padding-top: .3rem; }
+.tl-tit { margin: 0; display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; }
+.tl-tit strong { color: var(--marinho); }
+.tl-tit small { color: var(--texto-suave); font-size: .8rem; }
+.modal-xp { max-width: 900px; }
+.modal-xp .xp-ler-bloco { padding: .1rem 1rem .4rem; }
+
+@media (max-width: 1100px) { .ja-processos { grid-template-columns: 1fr 1fr; } .ja-breve { grid-column: 1 / -1; } }
+@media (max-width: 700px) { .ja-processos { grid-template-columns: 1fr; } .kanban { grid-template-columns: repeat(4, 82vw); } }
+.tl-etapa > div { justify-items: start; }
+.tl-etapa > div > .acoes-envio, .tl-etapa > div > .convite-novo { justify-self: stretch; }

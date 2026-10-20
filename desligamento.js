@@ -347,4 +347,4 @@ function registrar(app, { exigirAdmin, limitadorDeFalhas }) {
   });
 }
 
-module.exports = { registrar };
+module.exports = { registrar, lerFormulario, lerRespostas, texto, dataValida };

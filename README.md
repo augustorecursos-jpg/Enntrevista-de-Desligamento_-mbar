@@ -1,33 +1,45 @@
-# Entrevista de Desligamento · Âmbar Energia
+# Jornada Âmbar · Âmbar Energia
 
-Versão digital do formulário **PRESI-RH-0002 – Entrevista de Desligamento**, nas cores da Âmbar
-(azul-marinho `#0e3b5c` e laranja `#ec6b24`).
+**Cuidando de cada etapa.** Plataforma do RH para os processos da jornada do colaborador, nas cores da Âmbar
+(azul-marinho `#0e3b5c` e laranja `#ec6b24`). Na tela inicial o RH escolhe o processo:
 
-- O colaborador responde pelo celular ou computador, por **link geral**, **link individual**, **WhatsApp**, **e-mail** ou **QR Code**.
-- O RH acompanha **indicadores**, lê cada entrevista, imprime/salva em PDF e **exporta para Excel**.
-- O formulário é **editável** pelo RH (sem programação).
+- 🌱 **Avaliação de Experiência**: o **gestor** avalia o 1º e o 2º período por um link (WhatsApp, e-mail ou QR Code);
+  o **colaborador** registra a ciência digital; o RH acompanha prazos, decisões (Efetivar · Prorrogar · Rescindir) e indicadores.
+- 🚪 **Entrevista de Desligamento**: versão digital do formulário PRESI-RH-0002, respondida por quem está saindo.
+
+Tudo é editável pelo RH (perguntas, prazos e mensagens) e exporta para Excel.
 
 ## Páginas
 
 | Endereço | Para quem | O que faz |
 |---|---|---|
-| `/admin.html` (ou `/`) | RH (senha) | Enviar convites, indicadores, respostas, Excel e editor do formulário |
-| `/desligamento.html` | Colaborador | Entrevista pelo link geral (a pessoa preenche os próprios dados) |
-| `/desligamento.html?c=<código>` | Colaborador | Entrevista pelo convite individual (já identificada; aceita uma resposta) |
-| `/desligamento.html?previa=1` | RH | Pré-visualização (nada é enviado) |
+| `/admin.html` (ou `/`) | RH (senha) | Início, Pessoas, Avaliação de Experiência e Entrevista de Desligamento |
+| `/avaliacao.html?t=<código>` | Gestor | Avaliação de experiência de um colaborador (1º ou 2º período) |
+| `/ciencia.html?t=<código>` | Colaborador | Lê a avaliação e registra a ciência (substitui a assinatura em papel) |
+| `/avaliacao.html?previa=1` | RH | Pré-visualização do formulário de experiência |
+| `/desligamento.html` | Colaborador | Entrevista de desligamento pelo link geral |
+| `/desligamento.html?c=<código>` | Colaborador | Entrevista de desligamento pelo convite individual |
+| `/desligamento.html?previa=1` | RH | Pré-visualização da entrevista (nada é enviado) |
 
 ### Área do RH
-- **Enviar**: link geral e convites individuais (nome, matrícula, cargo, área, gestor, datas, WhatsApp, e-mail e
-  responsável RH). Cada link tem botões de **WhatsApp** (abre a conversa com a mensagem pronta), **e-mail**,
-  **copiar** e **QR Code** (PNG para imprimir). A lista mostra quem respondeu, recusou ou está pendente.
-- **Indicadores**: entrevistas, taxa de retorno, recusas, % que voltaria, satisfação com a empresa, tempo médio de casa,
-  alertas (ex.: pedido de contato com o Compliance), motivos de saída, satisfação por fator, benefícios, o que mudaria,
-  entrevistas por mês e por área; filtros por período, área e gestor; resultado de cada pergunta.
-- **Respostas**: entrevista completa, impressão/PDF e exportação **Excel** com as abas *Respostas*, *Base_indicadores*
-  (formato para tabela dinâmica/Power BI), *Resumo* e *Convites*.
-- **Formulário**: seções e perguntas (escolha única, múltipla seleção, grade de itens × escala, texto e data),
-  obrigatoriedade, justificativa, opção "Outros", alerta por resposta, textos e mensagem do convite (`{nome}` e `{link}`).
-  *Restaurar modelo original* recarrega o formulário do PDF.
+- **Início**: "O que vamos fazer hoje?" com os processos, os números do dia e os **próximos prazos** (avaliações
+  atrasadas ou vencendo em 15 dias), com envio ao gestor em um clique.
+- **Pessoas**: cadastro único (nome, chapa, cargo, setor, gestor e contatos, admissão) ou **importação da planilha de
+  admissões** (botão *Baixar modelo*). Ao cadastrar, a plataforma cria as avaliações do 1º e do 2º período com vencimento
+  calculado pela admissão (padrão 45 e 90 dias) e o prazo de devolução (padrão 10 dias antes). Cada pessoa tem uma
+  **ficha com linha do tempo**: Admissão → 1º período → 2º período → Desligamento, e dali se inicia a entrevista de
+  desligamento já com os dados preenchidos.
+- **Avaliação de Experiência**
+  - *Acompanhar*: quadro **A enviar → Com o gestor → Aguardando ciência → Concluídas**, com etiquetas de prazo
+    (verde, laranja, vermelho), aviso de que o gestor abriu o link, envio por WhatsApp/e-mail/link/QR Code, ciência
+    registrada pelo RH (quando assinada em papel), ajuste de vencimento e reabertura. Se o 1º período terminar em
+    **Prorrogar + N dias**, o 2º passa a vencer N dias depois; se terminar em **Efetivar** ou **Rescindir**, o 2º é dispensado.
+  - *Indicadores*: % efetivação, prorrogação e rescisão; devolvidas no prazo; tempo médio do gestor; atrasadas; alertas;
+    aderência a cada valor; competências; por setor e por gestor; e o **cruzamento com o desligamento** (quem saiu nos
+    primeiros 90 dias: o que o gestor avaliou × por que a pessoa saiu). Exporta Excel (*Avaliações*, *Base_indicadores*, *Pessoas*).
+  - *Formulário*: competências e perguntas editáveis, duração dos períodos, antecedência e mensagens ao gestor e ao
+    colaborador (`{gestor}`, `{nome}`, `{periodo}`, `{vencimento}`, `{prazo}`, `{link}`). O parecer final é fixo.
+- **Entrevista de Desligamento**: Enviar, Indicadores, Respostas e Formulário (como antes).
 - **Backup**: baixa uma cópia completa do banco.
 
 ## Publicar no Render (passo a passo)
@@ -71,7 +83,8 @@ npm start          # http://localhost:3000  (senha padrão de teste: ambar-rh)
 
 ```
 server.js          servidor (login do RH, backup, arquivos estáticos)
-desligamento.js    formulário padrão, convites, respostas e QR Code (API)
+experiencia.js     avaliação de experiência: pessoas, avaliação do gestor, ciência e QR Code (API)
+desligamento.js    entrevista de desligamento: formulário padrão, convites, respostas e QR Code (API)
 db.js              banco SQLite nativo do Node (sem banco externo)
-public/            página do colaborador (desligamento.html) e área do RH (admin.html)
+public/            avaliacao.html (gestor), ciencia.html e desligamento.html (colaborador), admin.html (RH)
 ```

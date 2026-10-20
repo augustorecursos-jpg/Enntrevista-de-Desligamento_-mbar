@@ -1,4 +1,4 @@
-// Área do RH: login, menu e utilitários dos gráficos usados pela entrevista de desligamento.
+// Área do RH · Jornada Âmbar: login, navegação entre os processos e utilitários dos gráficos.
 const fmt = (n, casas = 0) => (n == null ? '–' : Number(n).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas }));
 const fmtPct = (n) => (n == null ? '–' : `${fmt(n, Number.isInteger(n) ? 0 : 1)}%`);
 const num = (n, casas = 2) => String(Math.round(n * 10 ** casas) / 10 ** casas).replace('.', ',');
@@ -11,12 +11,55 @@ async function iniciar() {
   } catch { /* fica na tela de login */ }
 }
 
-function mostrarPainel() {
+async function mostrarPainel() {
   document.getElementById('tela-login').hidden = true;
   document.getElementById('lateral').hidden = false;
   document.getElementById('principal').hidden = false;
-  carregarDesligamento();
+  await Promise.all([carregarDesligamento(), xpCarregar()]);
+  irPara(location.hash.slice(1) || 'inicio');
 }
+
+// ---------- Navegação ----------
+const VISOES = {
+  inicio: ['Início', () => renderInicio()],
+  pessoas: ['Pessoas', () => renderPessoas()],
+  'exp-acompanhar': ['Avaliação de experiência', () => renderKanban()],
+  'exp-indicadores': ['Avaliação de experiência · Indicadores', () => renderXpIndicadores()],
+  'exp-formulario': ['Avaliação de experiência · Formulário', () => renderXpFormulario()],
+};
+const SUBS_DSL = { enviar: 'Enviar', indicadores: 'Indicadores', respostas: 'Respostas', formulario: 'Formulário' };
+let visaoAtual = 'inicio';
+
+function irPara(visao) {
+  const sub = visao.startsWith('dsl-') ? visao.slice(4) : null;
+  if (sub ? !SUBS_DSL[sub] : !VISOES[visao]) visao = 'inicio';
+  visaoAtual = visao;
+  history.replaceState(null, '', `#${visaoAtual}`);
+  const ehDsl = Boolean(sub && SUBS_DSL[sub]);
+  document.querySelector('[data-painel="desligamento"]').hidden = !ehDsl;
+  document.querySelectorAll('[data-view-painel]').forEach(el => { el.hidden = ehDsl || el.dataset.viewPainel !== visaoAtual; });
+  document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('ativo', !ehDsl && b.dataset.view === visaoAtual));
+  if (ehDsl) {
+    dslTrocarSub(sub);
+    document.getElementById('barra-titulo').textContent = `Entrevista de desligamento · ${SUBS_DSL[sub]}`;
+  } else {
+    document.querySelectorAll('[data-sub]').forEach(b => b.classList.remove('ativo'));
+    document.getElementById('barra-titulo').textContent = VISOES[visaoAtual][0];
+    VISOES[visaoAtual][1]();
+  }
+  document.getElementById('lateral').classList.remove('aberta');
+  window.scrollTo(0, 0);
+}
+function renderVisaoAtual() {
+  if (visaoAtual.startsWith('dsl-')) dslTrocarSub(visaoAtual.slice(4));
+  else VISOES[visaoAtual][1]();
+}
+document.addEventListener('click', (e) => {
+  const v = e.target.closest('[data-view], [data-ir-view]');
+  if (v) return irPara(v.dataset.view || v.dataset.irView);
+  const s = e.target.closest('[data-sub], [data-ir-sub]');
+  if (s && (s.closest('.lateral') || s.dataset.irSub)) irPara(`dsl-${s.dataset.sub || s.dataset.irSub}`);
+});
 
 document.getElementById('form-login').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -32,7 +75,6 @@ document.getElementById('sair').addEventListener('click', async () => {
 });
 
 document.getElementById('btn-menu').addEventListener('click', () => document.getElementById('lateral').classList.toggle('aberta'));
-document.getElementById('lateral').addEventListener('click', (e) => { if (e.target.closest('[data-sub]')) e.currentTarget.classList.remove('aberta'); });
 document.addEventListener('click', (e) => { if (e.target.closest('[data-fechar]')) e.target.closest('dialog').close(); });
 
 document.getElementById('qr-copiar').addEventListener('click', async () => {

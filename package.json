@@ -2,7 +2,7 @@
   "name": "ambar-entrevista-desligamento",
   "version": "1.0.0",
   "private": true,
-  "description": "Entrevista de desligamento digital (link, WhatsApp, e-mail, QR Code, indicadores e Excel) - Âmbar Energia / RH",
+  "description": "Jornada Âmbar: avaliação de experiência e entrevista de desligamento (link, WhatsApp, e-mail, QR Code, indicadores e Excel) - Âmbar Energia / RH",
   "main": "server.js",
   "scripts": {
     "start": "node --no-warnings server.js",

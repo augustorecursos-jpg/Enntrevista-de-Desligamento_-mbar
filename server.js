@@ -1,5 +1,5 @@
-// Entrevista de Desligamento · Âmbar Energia (RH / DHO)
-// Servidor HTTP: página pública da entrevista, área do RH (senha) e arquivos estáticos.
+// Jornada Âmbar · Âmbar Energia (RH / DHO)
+// Servidor HTTP: avaliação de experiência, entrevista de desligamento, área do RH (senha) e arquivos estáticos.
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
@@ -120,6 +120,9 @@ app.get('/api/admin/sessao', exigirAdmin, (_req, res) => res.json({ ok: true }))
 // Entrevista: formulário, convites, respostas e QR Code.
 require('./desligamento').registrar(app, { exigirAdmin, limitadorDeFalhas });
 
+// Avaliação de experiência: pessoas, avaliação do gestor, ciência do colaborador e QR Code.
+require('./experiencia').registrar(app, { exigirAdmin, limitadorDeFalhas });
+
 // Cópia completa do banco (formulário, convites e respostas).
 app.get('/api/admin/backup', exigirAdmin, (_req, res) => {
   const arquivo = path.join(DATA_DIR, `backup-${Date.now()}.db`);
@@ -135,4 +138,4 @@ app.use((err, _req, res, _next) => {
   res.status(err.status || 400).json({ erro: err.message || 'Erro inesperado' });
 });
 
-app.listen(PORT, () => console.log(`Entrevista de Desligamento rodando em http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Jornada Âmbar rodando em http://localhost:${PORT}`));
