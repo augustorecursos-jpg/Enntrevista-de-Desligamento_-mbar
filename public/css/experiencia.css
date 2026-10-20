@@ -179,3 +179,15 @@ textarea.xp-campo { resize: vertical; line-height: 1.5; }
   .xp-enviar { justify-self: stretch; justify-content: center; }
 }
 .xp-coluna .xp-ops { flex-direction: column; gap: .55rem; }
+
+/* Marca d'água: usinas, transmissão, solar e eólica em traço fino no fundo claro */
+body.xp::before {
+  content: ''; position: fixed; left: 0; right: 0; bottom: 0; height: min(46vh, 420px); z-index: 0; pointer-events: none;
+  background: url("../img/energia.svg") center bottom / max(100%, 1100px) auto no-repeat; opacity: .1;
+}
+body.xp::after {
+  content: ''; position: fixed; right: -120px; top: 70px; width: 620px; height: 160px; z-index: 0; pointer-events: none;
+  background: url("../img/energia.svg") right top / 1100px auto no-repeat; opacity: .045; transform: scaleX(-1);
+}
+.xp-topo { z-index: 10; }
+.xp-pagina { position: relative; z-index: 1; }
