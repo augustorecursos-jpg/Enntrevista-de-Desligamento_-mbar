@@ -5,7 +5,13 @@ const xpPrevia = xpParams.get('previa') === '1';
 const xpRaiz = document.getElementById('xp-conteudo');
 let xpDados;
 
-const xpOpcoesHtml = (nome, opcoes, tipo = 'radio') => `<div class="xp-ops">${opcoes.map(o => `
+/** Como o colaborador é citado nas frases: pelo primeiro nome ou, na pré-visualização, de forma genérica. */
+function xpQuem() {
+  const n = esc(xpDados.pessoa.nome.split(' ')[0]);
+  return xpPrevia ? { de: 'do colaborador', com: 'o colaborador', ele: 'o colaborador', nome: 'o colaborador' } : { de: `de ${n}`, com: n, ele: n, nome: n };
+}
+
+const xpOpcoesHtml =(nome, opcoes, tipo = 'radio') => `<div class="xp-ops">${opcoes.map(o => `
   <label class="xp-op"><input type="${tipo}" name="${nome}" value="${esc(o)}"><span>${esc(o)}</span></label>`).join('')}</div>`;
 
 function xpPerguntaHtml(p) {
@@ -75,7 +81,7 @@ function xpRender() {
       <form class="xp-folha" id="xp-form" novalidate>
         <section class="xp-abertura">
           <small>${esc(d.form.titulo.toUpperCase())} · ${d.periodo}º PERÍODO</small>
-          <h1>Como está sendo a chegada de <em>${esc(d.pessoa.nome.split(' ')[0])}</em>?</h1>
+          <h1>Como está sendo a chegada <em>${xpQuem().de}</em>?</h1>
           <p>${esc(d.form.introducao)}</p>
         </section>
         ${d.form.secoes.map((sec, i) => `
@@ -103,9 +109,9 @@ function xpRender() {
           <label class="xp-q larga" data-parecer="gestor_nome"><span class="xp-q-texto">Seu nome (assinatura do gestor) <b class="obrig">*</b></span>
             <input class="xp-campo" name="gestor_nome" maxlength="200" value="${esc(d.pessoa.gestor || '')}"><p class="xp-erro"></p></label>
           <label class="xp-acordo"><input type="checkbox" name="colaborador_de_acordo">
-            <span><strong>Colaborador de acordo</strong><small>Conversei com ${esc(d.pessoa.nome.split(' ')[0])} sobre esta avaliação e ele(a) está de acordo.</small></span></label>
+            <span><strong>Colaborador de acordo</strong><small>Conversei com ${xpQuem().com} sobre esta avaliação e ele(a) está de acordo.</small></span></label>
           <button class="xp-enviar" type="submit" disabled title="Marque “Colaborador de acordo” para enviar">Enviar avaliação <span aria-hidden="true">→</span></button>
-          <p class="xp-nota">Depois do envio, ${esc(d.pessoa.nome.split(' ')[0])} recebe a avaliação para registrar a ciência.</p>
+          <p class="xp-nota">Depois do envio, ${xpQuem().ele} recebe a avaliação para registrar a ciência.</p>
         </section>
       </form>
     </div>`;
@@ -233,7 +239,6 @@ const xpParagrafos = (t) => String(t || '').split(/\n\s*\n/).map(s => s.trim()).
 
 function xpBoasVindas() {
   const d = xpDados;
-  const nome1 = d.pessoa.nome.split(' ')[0];
   const gestor1 = (d.pessoa.gestor || '').split(' ')[0];
   const total = Math.max(1, xpDiasEntre(d.pessoa.admissao, d.vencimento) + 1);
   const dia = Math.min(total, Math.max(1, xpDiasEntre(d.pessoa.admissao, xpHojeIso()) + 1));
@@ -267,7 +272,7 @@ function xpBoasVindas() {
         ${xpPrevia ? '<p class="xp-aviso">👁 Pré-visualização com dados de exemplo · nada será enviado</p>' : ''}
         <div class="xp-bv-conteudo">
           <p class="xp-bv-tit">${esc(d.form.titulo.toUpperCase())}</p>
-          <h1>${gestor1 ? `${esc(gestor1)}, como` : 'Como'} está sendo<br><em>a chegada de ${esc(nome1)}?</em></h1>
+          <h1>${gestor1 && !xpPrevia ? `${esc(gestor1)}, como` : 'Gestor, como'} está sendo<br><em>a chegada ${xpQuem().de}?</em></h1>
           <p class="xp-bv-intro">Sua avaliação do ${d.periodo}º período ajuda a decidir o próximo passo e a dar um retorno justo para quem está começando. ${esc(d.form.introducao)}</p>
           <ul class="xp-bv-fatos">
             <li><strong>${perguntas}</strong><span>perguntas</span></li>
