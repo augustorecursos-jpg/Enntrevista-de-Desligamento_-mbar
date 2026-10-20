@@ -187,3 +187,4 @@ body.papel-regional [data-so-admin] { display: none !important; }
 .us-cred .q-dica { color: #b9cddd; margin: 0; }
 .us-cred .btn-claro { background: rgba(255, 255, 255, .1); color: #fff; border-color: rgba(255, 255, 255, .25); }
 @media (max-width: 1000px) { .us-grade { grid-template-columns: 1fr; } .ja-eu-txt { display: none; } .ja-eu { padding: .2rem; } }
+.jl-dica a { color: var(--laranja); font-weight: 700; }

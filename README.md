@@ -52,6 +52,18 @@ Tudo é editável pelo RH (perguntas, prazos e mensagens) e exporta para Excel.
     O "link geral" da entrevista de desligamento dele já marca a regional (`?r=<regional>`).
 - **Backup**: baixa uma cópia completa do banco (somente administradores).
 
+## Guia do RH (e-book)
+
+O PDF `public/guia/guia-do-rh.pdf` (link no menu lateral e na tela de login) é gerado com prints reais da plataforma,
+a partir de um servidor temporário com dados fictícios — o banco de produção não é usado. Depois de mudar telas, gere de novo:
+
+```bash
+node scripts/ebook/gerar-ebook.js   # requer o Playwright instalado (npm i -g playwright)
+```
+
+Texto e diagramação em `scripts/ebook/conteudo-ebook.js`; prints e marcações em `scripts/ebook/capturar.js`;
+dados fictícios em `scripts/ebook/dados-ebook.js`.
+
 ## Publicar no Render (passo a passo)
 
 1. Acesse **render.com** e entre com a conta do GitHub (*Sign in with GitHub*).
