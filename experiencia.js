@@ -11,6 +11,15 @@ const DECISOES = ['Efetivar', 'Prorrogar', 'Rescindir'];
 const ADERENCIA = ['Aderente', 'Não aderente'];
 const CONCEITO = ['Bom', 'Regular', 'Ruim'];
 const SIM_NAO = ['Sim', 'Não'];
+// Mensagem ao gestor exibida na abertura da avaliação (editável pelo RH). Parágrafos separados por linha em branco.
+const ORIENTACAO = [
+  'Gestor, avaliar é mais do que preencher um formulário. É reconhecer potencial, orientar o desenvolvimento e contribuir para a construção de uma trajetória profissional de sucesso.',
+  'A Avaliação de Experiência é um momento fundamental para compreender a adaptação, o desempenho e a evolução do colaborador, identificando seus pontos fortes, oportunidades de melhoria e alinhamento às expectativas da função e da companhia.',
+  'Ao realizar o preenchimento, seja claro, objetivo e criterioso, considerando comportamentos e entregas observáveis, com avaliações fundamentadas em fatos e exemplos concretos.',
+  'Mais do que atribuir notas, seu papel é oferecer uma análise justa e construtiva, capaz de direcionar feedbacks, fortalecer competências e apoiar decisões responsáveis.',
+  'Lembre-se: uma avaliação bem conduzida não apenas analisa o desempenho de hoje, mas contribui para desenvolver o talento de amanhã.',
+  'Avalie com responsabilidade. Oriente com clareza. Desenvolva com propósito.',
+].join('\n\n');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS pessoas (
@@ -51,6 +60,10 @@ db.exec(`
     UNIQUE (pessoa_id, periodo)
   );
 `);
+// Confirmação do gestor de que o colaborador está de acordo com a avaliação (exigida para enviar).
+if (!db.prepare('PRAGMA table_info(exp_avaliacoes)').all().some(c => c.name === 'colaborador_de_acordo')) {
+  db.exec('ALTER TABLE exp_avaliacoes ADD COLUMN colaborador_de_acordo INTEGER NOT NULL DEFAULT 0');
+}
 
 /** Formulário inicial, transcrito da planilha "Avaliação de Experiência". */
 function formularioPadrao() {
@@ -62,6 +75,7 @@ function formularioPadrao() {
     assunto: 'Avaliação de experiência · {nome}',
     mensagem: 'Olá, {gestor}! Está na hora da avaliação de experiência ({periodo}) de {nome}, que vence em {vencimento}. Por favor, responda até {prazo} pelo link: {link}',
     mensagem_ciencia: 'Olá, {nome}! Sua avaliação de experiência ({periodo}) foi concluída pelo seu gestor. Para registrar sua ciência, acesse: {link}',
+    orientacao: ORIENTACAO,
     periodos: [45, 90],
     antecedencia: 10,
     secoes: [
@@ -96,7 +110,10 @@ function formularioPadrao() {
 }
 
 db.prepare('INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES (?, ?)').run(CHAVE_FORM, JSON.stringify(formularioPadrao()));
-const formulario = () => JSON.parse(db.prepare('SELECT valor FROM configuracoes WHERE chave = ?').get(CHAVE_FORM).valor);
+function formulario() {
+  const f = JSON.parse(db.prepare('SELECT valor FROM configuracoes WHERE chave = ?').get(CHAVE_FORM).valor);
+  return { ...f, orientacao: f.orientacao ?? ORIENTACAO };
+}
 
 // ---------- datas ----------
 const somarDias = (iso, dias) => {
@@ -170,8 +187,9 @@ function publico(a, form) {
     periodo: a.periodo, vencimento: a.vencimento, prazo: a.prazo, status: a.status,
     pessoa: { nome: a.nome, chapa: a.chapa, cargo: a.cargo, setor: a.setor, gestor: a.gestor, admissao: a.admissao },
     respostas: a.respostas, classificacao: a.classificacao, decisao: a.decisao, prorrogar_dias: a.prorrogar_dias,
-    comentario: a.comentario, gestor_nome: a.gestor_nome, respondido_em: a.respondido_em, ciencia_em: a.ciencia_em,
-    form: { titulo: form.titulo, introducao: form.introducao, secoes: form.secoes },
+    comentario: a.comentario, gestor_nome: a.gestor_nome, colaborador_de_acordo: a.colaborador_de_acordo,
+    respondido_em: a.respondido_em, ciencia_em: a.ciencia_em,
+    form: { titulo: form.titulo, introducao: form.introducao, orientacao: form.orientacao, secoes: form.secoes },
     classificacoes: CLASSIFICACOES, decisoes: DECISOES,
   };
 }
@@ -207,11 +225,12 @@ function registrar(app, { exigirAdmin, limitadorDeFalhas }) {
     if (decisao === 'Prorrogar' && !(Number.isInteger(dias) && dias > 0 && dias <= 90)) return res.status(400).json({ erro: 'Informe por quantos dias o contrato será prorrogado (1 a 90).' });
     const gestorNome = texto(b.gestor_nome, 200);
     if (!gestorNome) return res.status(400).json({ erro: 'Informe seu nome para assinar a avaliação.' });
+    if (b.colaborador_de_acordo !== true) return res.status(400).json({ erro: 'Confirme que o colaborador está de acordo com a avaliação.' });
     const alerta = lidas.alerta || decisao === 'Rescindir' || classificacao === CLASSIFICACOES[2];
 
     emTransacao(() => {
       db.prepare(`UPDATE exp_avaliacoes SET respostas = ?, classificacao = ?, decisao = ?, prorrogar_dias = ?, comentario = ?, gestor_nome = ?,
-        alerta = ?, respondido_em = datetime('now'), enviado_em = COALESCE(enviado_em, datetime('now')) WHERE id = ?`)
+        colaborador_de_acordo = 1, alerta = ?, respondido_em = datetime('now'), enviado_em = COALESCE(enviado_em, datetime('now')) WHERE id = ?`)
         .run(JSON.stringify(lidas.respostas), classificacao, decisao, dias, texto(b.comentario, 4000), gestorNome, alerta ? 1 : 0, a.id);
       // Prorrogação no 1º período: o 2º período passa a vencer "vencimento + dias".
       if (a.periodo === 1 && decisao === 'Prorrogar') {
@@ -320,7 +339,7 @@ function registrar(app, { exigirAdmin, limitadorDeFalhas }) {
         .run(texto(req.body?.nome, 200) || 'Registrada pelo RH', a.id);
     } else if (acao === 'reabrir') {
       db.prepare(`UPDATE exp_avaliacoes SET respostas = NULL, classificacao = NULL, decisao = NULL, prorrogar_dias = NULL, comentario = NULL,
-        gestor_nome = NULL, alerta = 0, respondido_em = NULL, ciencia_em = NULL, ciencia_nome = NULL, ciencia_forma = NULL WHERE id = ?`).run(a.id);
+        gestor_nome = NULL, colaborador_de_acordo = 0, alerta = 0, respondido_em = NULL, ciencia_em = NULL, ciencia_nome = NULL, ciencia_forma = NULL WHERE id = ?`).run(a.id);
     } else return res.status(400).json({ erro: 'Ação desconhecida.' });
     res.json({ ok: true });
   });
@@ -344,6 +363,7 @@ function registrar(app, { exigirAdmin, limitadorDeFalhas }) {
       assunto: texto(b.assunto, 200) || 'Avaliação de experiência · {nome}',
       mensagem: texto(b.mensagem, 2000) || 'Olá, {gestor}! Responda a avaliação de experiência de {nome}: {link}',
       mensagem_ciencia: texto(b.mensagem_ciencia, 2000) || 'Olá, {nome}! Registre sua ciência da avaliação de experiência: {link}',
+      orientacao: texto(b.orientacao, 6000) || ORIENTACAO,
       periodos, antecedencia,
     };
     db.prepare('UPDATE configuracoes SET valor = ? WHERE chave = ?').run(JSON.stringify(novo), CHAVE_FORM);

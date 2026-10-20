@@ -61,12 +61,45 @@ document.addEventListener('click', (e) => {
   if (s && (s.closest('.lateral') || s.dataset.irSub)) irPara(`dsl-${s.dataset.sub || s.dataset.irSub}`);
 });
 
+// ---------- Login ----------
+(() => {
+  const h = new Date().getHours();
+  document.getElementById('jl-ola').textContent = `${h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'}! 👋`;
+})();
+const jlSenha = document.getElementById('senha');
+const jlErro = document.getElementById('jl-erro');
+document.getElementById('jl-ver').addEventListener('click', (e) => {
+  const mostrar = jlSenha.type === 'password';
+  jlSenha.type = mostrar ? 'text' : 'password';
+  e.currentTarget.textContent = mostrar ? '🙈' : '👁';
+  e.currentTarget.setAttribute('aria-label', mostrar ? 'Ocultar senha' : 'Mostrar senha');
+  jlSenha.focus();
+});
+['keydown', 'keyup'].forEach(ev => jlSenha.addEventListener(ev, (e) => {
+  if (e.getModifierState) document.getElementById('jl-caps').hidden = !e.getModifierState('CapsLock');
+}));
+jlSenha.addEventListener('input', () => { jlErro.textContent = ''; jlSenha.closest('.jl-senha').classList.remove('erro'); });
+
 document.getElementById('form-login').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const form = e.currentTarget;
+  const btn = form.querySelector('.jl-entrar');
+  if (!jlSenha.value) { jlErro.textContent = 'Digite a senha para entrar.'; jlSenha.focus(); return; }
+  btn.disabled = true;
+  btn.querySelector('span').textContent = 'Entrando…';
   try {
-    await api('/api/admin/entrar', { method: 'POST', body: { senha: document.getElementById('senha').value } });
-    mostrarPainel();
-  } catch (err) { toast(err.message, 'erro'); }
+    await api('/api/admin/entrar', { method: 'POST', body: { senha: jlSenha.value } });
+    document.getElementById('tela-login').classList.add('saindo');
+    setTimeout(mostrarPainel, 350);
+  } catch (err) {
+    jlErro.textContent = err.status === 401 ? 'Senha incorreta. Confira e tente de novo.' : err.message;
+    jlSenha.closest('.jl-senha').classList.add('erro');
+    form.classList.remove('treme'); void form.offsetWidth; form.classList.add('treme');
+    jlSenha.select();
+  } finally {
+    btn.disabled = false;
+    btn.querySelector('span').textContent = 'Entrar na Jornada';
+  }
 });
 
 document.getElementById('sair').addEventListener('click', async () => {

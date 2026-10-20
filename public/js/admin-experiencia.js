@@ -548,10 +548,10 @@ document.getElementById('xi-exportar').addEventListener('click', () => {
     if (p.justificativa) cols.push([`${p.texto} – Justificativa`, p, (r) => r?.justificativa ?? '']);
   }
   const cab = ['ID', 'Nome', 'Chapa', 'Cargo', 'Setor', 'Gestor', 'Admissão', 'Período', 'Vencimento', 'Devolver até', 'Situação', 'Enviado ao gestor', 'Respondida em',
-    'No prazo', 'Dias do gestor', 'Classificação', 'Decisão', 'Prorrogar (dias)', 'Comentário', 'Assinado por', 'Ciência em', 'Ciência por', 'Alerta', ...cols.map(c => c[0])];
+    'No prazo', 'Dias do gestor', 'Classificação', 'Decisão', 'Prorrogar (dias)', 'Comentário', 'Assinado por', 'Colaborador de acordo', 'Ciência em', 'Ciência por', 'Alerta', ...cols.map(c => c[0])];
   const linhas = xp.avaliacoes.map(a => [a.id, a.nome, a.chapa, a.cargo, a.setor, a.gestor, dataCel(a.admissao), `${a.periodo}º`, dataCel(a.vencimento), dataCel(a.prazo),
     XP_STATUS[a.status][0], dh(a.enviado_em), dh(a.respondido_em), a.respondido_em ? (xpNoPrazo(a) ? 'Sim' : 'Não') : '', xpTempo(a) ?? '',
-    a.classificacao || '', a.decisao || '', a.prorrogar_dias || '', a.comentario || '', a.gestor_nome || '', dh(a.ciencia_em), a.ciencia_nome || '', a.alerta ? 'Sim' : 'Não',
+    a.classificacao || '', a.decisao || '', a.prorrogar_dias || '', a.comentario || '', a.gestor_nome || '', a.respondido_em ? (a.colaborador_de_acordo ? 'Sim' : 'Não registrado') : '', dh(a.ciencia_em), a.ciencia_nome || '', a.alerta ? 'Sim' : 'Não',
     ...cols.map(([, p, f]) => f(a.respostas.find(r => r.id === p.id)))]);
   const base = [['ID', 'Nome', 'Setor', 'Gestor', 'Período', 'Vencimento', 'Decisão', 'Competência', 'Pergunta', 'Item', 'Resposta', 'Positiva (1/0)']];
   for (const a of xp.avaliacoes.filter(xpRespondida)) {
@@ -584,6 +584,7 @@ const xpEditor = criarEditorFormulario(document.getElementById('xf-secoes'), {
 function xpCarregarFormulario(f) {
   document.getElementById('xf-titulo').value = f.titulo || '';
   document.getElementById('xf-introducao').value = f.introducao || '';
+  document.getElementById('xf-orientacao').value = f.orientacao || '';
   document.getElementById('xf-p1').value = f.periodos?.[0] ?? 45;
   document.getElementById('xf-p2').value = f.periodos?.[1] ?? 90;
   document.getElementById('xf-antecedencia').value = f.antecedencia ?? 10;
@@ -607,6 +608,7 @@ document.getElementById('xf-form').addEventListener('submit', async (e) => {
       ativa: document.getElementById('xf-ativa').checked,
       titulo: document.getElementById('xf-titulo').value,
       introducao: document.getElementById('xf-introducao').value,
+      orientacao: document.getElementById('xf-orientacao').value,
       periodos: [Number(document.getElementById('xf-p1').value), Number(document.getElementById('xf-p2').value)],
       antecedencia: Number(document.getElementById('xf-antecedencia').value),
       assunto: document.getElementById('xf-assunto').value,

@@ -51,6 +51,7 @@ function xpHtmlLeitura(dados) {
       <div class="xp-ler-q"><p>De maneira geral, o colaborador pode ser classificado como</p><div><strong>${esc(dados.classificacao || '–')}</strong></div></div>
       <div class="xp-ler-q"><p>Decisão</p><div><strong class="xp-decisao d-${esc((dados.decisao || '').toLowerCase())}">${esc(decisao || '–')}</strong></div></div>
       ${dados.comentario ? `<div class="xp-ler-q larga"><p>Comentário</p><div><span class="xp-r texto">${esc(dados.comentario)}</span></div></div>` : ''}
+      ${dados.respondido_em ? `<div class="xp-ler-q"><p>Colaborador de acordo</p><div><span class="xp-r ${dados.colaborador_de_acordo ? 'positiva' : 'atencao'}">${dados.colaborador_de_acordo ? '✓ Sim' : 'Não registrado'}</span></div></div>` : ''}
       <p class="xp-ler-assina">Avaliado por <strong>${esc(dados.gestor_nome || dados.pessoa?.gestor || '–')}</strong> em ${xpDataHora(dados.respondido_em)}</p>
     </section>`;
 }

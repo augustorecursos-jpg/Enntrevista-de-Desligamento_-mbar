@@ -96,3 +96,73 @@
 @media (max-width: 700px) { .ja-processos { grid-template-columns: 1fr; } .kanban { grid-template-columns: repeat(4, 82vw); } }
 .tl-etapa > div { justify-items: start; }
 .tl-etapa > div > .acoes-envio, .tl-etapa > div > .convite-novo { justify-self: stretch; }
+
+/* ---------- Login do RH: "a jornada" ---------- */
+.jl { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: 1.15fr 1fr; background: #fbf8f3; overflow: auto; transition: opacity .35s ease, transform .35s ease; }
+.jl[hidden] { display: none; }
+.jl.saindo { opacity: 0; transform: scale(1.02); }
+.jl-hero {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; padding: clamp(24px, 4vw, 56px); color: #fff;
+  background: linear-gradient(160deg, #0e3b5c 0%, #0a2c45 55%, #071f31 100%);
+}
+.jl-hero::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 160px; pointer-events: none;
+  background: url("../img/energia.svg") center bottom / max(100%, 900px) auto no-repeat; filter: invert(1); opacity: .09; }
+.jl-hero .logo b { font-size: 1.9rem; }
+.jl-hero-txt { position: relative; z-index: 1; margin-top: clamp(1.5rem, 7vh, 4.5rem); max-width: 520px; }
+.jl-kick { display: flex; align-items: center; gap: .6rem; margin: 0; font-family: var(--fonte-titulo); font-size: .74rem; font-weight: 800; letter-spacing: .22em; color: var(--laranja-claro); }
+.jl-kick img { width: 26px; height: 26px; border-radius: 7px; }
+.jl-hero h1 { margin: 1rem 0; color: #fff; font-weight: 300; font-size: clamp(2.2rem, 4.2vw, 3.6rem); line-height: 1.08; letter-spacing: -.01em; }
+.jl-hero h1 em { font-style: normal; font-weight: 700; color: var(--laranja); }
+.jl-hero-txt > p:last-child { margin: 0; color: #c4d4e1; font-size: 1.05rem; line-height: 1.65; max-width: 460px; }
+.jl-caminho { position: relative; z-index: 1; width: 100%; max-width: 640px; margin-top: auto; margin-bottom: clamp(30px, 8vh, 90px); overflow: visible; }
+.jl-trilha-base { stroke: rgba(255, 255, 255, .14); stroke-width: 4; stroke-linecap: round; }
+.jl-trilha { stroke: var(--laranja); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 900; stroke-dashoffset: 900; animation: jl-traco 2.4s .3s cubic-bezier(.4, 0, .2, 1) forwards; }
+@keyframes jl-traco { to { stroke-dashoffset: 0; } }
+.jl-marco circle { fill: #0e3b5c; stroke: var(--laranja-claro); stroke-width: 2.5; }
+.jl-marco { opacity: 0; animation: jl-aparece .5s ease forwards; }
+.jl-marco.m1 { animation-delay: .6s; } .jl-marco.m2 { animation-delay: 1.4s; } .jl-marco.m3 { animation-delay: 2.2s; }
+@keyframes jl-aparece { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.jl-ic path { fill: none; stroke: #fff; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.jl-ic path.cheio { fill: var(--laranja); stroke: none; }
+.jl-rot { fill: #fff; font-family: var(--fonte-titulo); font-weight: 700; font-size: 17px; }
+.jl-sub { fill: #9fb6c8; font-family: var(--fonte); font-size: 13px; }
+
+.jl-acesso { position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2rem; padding: 3rem clamp(20px, 5vw, 64px); }
+.jl-acesso::before { content: ''; position: absolute; right: 0; top: 0; width: 260px; height: 220px; pointer-events: none;
+  background-image: radial-gradient(rgba(14, 59, 92, .18) 1.2px, transparent 1.3px); background-size: 16px 16px;
+  -webkit-mask-image: linear-gradient(225deg, #000 10%, transparent 70%); mask-image: linear-gradient(225deg, #000 10%, transparent 70%); }
+.jl-form { position: relative; width: min(420px, 100%); display: grid; gap: .55rem; }
+.jl-form.treme { animation: jl-treme .4s; }
+@keyframes jl-treme { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.jl-ola { font-family: var(--fonte-titulo); font-weight: 800; font-size: .8rem; letter-spacing: .16em; text-transform: uppercase; color: var(--laranja); }
+.jl-form h2 { font-size: clamp(1.7rem, 2.6vw, 2.2rem); font-weight: 600; line-height: 1.15; color: var(--marinho); }
+.jl-intro { margin: 0 0 1.2rem; color: var(--texto-suave); font-size: 1rem; }
+.jl-form label { font-weight: 700; font-size: .85rem; color: var(--marinho); }
+.jl-senha { display: flex; align-items: center; border: 1.5px solid var(--linha); border-radius: 14px; background: #fff; transition: border-color .15s, box-shadow .15s; }
+.jl-senha:focus-within { border-color: var(--marinho); box-shadow: 0 0 0 4px rgba(14, 59, 92, .1); }
+.jl-senha.erro { border-color: var(--vermelho); box-shadow: 0 0 0 4px rgba(217, 58, 43, .1); }
+.jl-senha input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; padding: 1rem 1.1rem; font-size: 1.05rem; color: var(--texto); border-radius: 14px; }
+.jl-senha button { border: 0; background: none; padding: 0 1rem; font-size: 1.1rem; opacity: .65; }
+.jl-senha button:hover { opacity: 1; }
+.jl-caps { margin: 0; font-size: .8rem; font-weight: 700; color: #b54d12; }
+.jl-erro { margin: 0; min-height: 1.1em; font-size: .85rem; font-weight: 700; color: var(--vermelho); }
+.jl-entrar { margin-top: .4rem; display: flex; align-items: center; justify-content: center; gap: .6rem; padding: 1.05rem; border: 0; border-radius: 14px; background: var(--laranja); color: #fff;
+  font-family: var(--fonte-titulo); font-weight: 700; font-size: 1.05rem; box-shadow: 0 16px 32px -16px rgba(236, 107, 36, .95); transition: background .15s, transform .15s; }
+.jl-entrar b { transition: transform .2s; }
+.jl-entrar:hover { background: #d95d18; transform: translateY(-1px); }
+.jl-entrar:hover b { transform: translateX(4px); }
+.jl-entrar:disabled { opacity: .7; cursor: wait; transform: none; }
+.jl-dica { margin: .8rem 0 0; font-size: .82rem; color: var(--texto-suave); line-height: 1.5; }
+.jl-processos { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; }
+.jl-processos span { display: inline-flex; align-items: center; gap: .45rem; padding: .45rem .8rem; border-radius: 999px; background: #fff; border: 1px solid var(--linha); font-size: .8rem; font-weight: 700; color: var(--marinho); }
+.jl-processos img { width: 18px; height: 18px; border-radius: 5px; }
+@media (max-width: 900px) {
+  .jl { display: block; }
+  .jl-hero { padding-bottom: 1.6rem; }
+  .jl-hero-txt { margin-top: 1.4rem; }
+  .jl-hero h1 { font-size: 2rem; }
+  .jl-hero-txt > p:last-child { font-size: .95rem; }
+  .jl-caminho { margin: 1.2rem 0 0; }
+  .jl-acesso { justify-content: flex-start; padding-top: 2rem; }
+}
+@media (prefers-reduced-motion: reduce) { .jl-trilha { animation: none; stroke-dashoffset: 0; } .jl-marco { animation: none; opacity: 1; } }

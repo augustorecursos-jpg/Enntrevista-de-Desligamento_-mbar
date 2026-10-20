@@ -18,15 +18,49 @@
 <body class="app">
 
   <!-- Login do RH -->
-  <div class="login" id="tela-login">
-    <form class="cartao login-cartao" id="form-login">
-      <span class="logo"><b>Âmbar</b><small>ENERGIA</small></span>
-      <h1>Jornada Âmbar</h1>
-      <p>Cuidando de cada etapa · Área do RH</p>
-      <label for="senha">Senha de administrador</label>
-      <input id="senha" type="password" class="campo" autocomplete="current-password" required>
-      <button class="btn btn-laranja" type="submit">Entrar</button>
-    </form>
+  <div class="jl" id="tela-login">
+    <section class="jl-hero" aria-hidden="true">
+      <span class="logo claro"><b>Âmbar</b><small>ENERGIA</small></span>
+      <div class="jl-hero-txt">
+        <p class="jl-kick"><img src="img/favicon-jornada.svg" alt=""> JORNADA ÂMBAR</p>
+        <h1>Cada pessoa.<br>Cada etapa.<br><em>Com cuidado.</em></h1>
+        <p>Acompanhe a jornada de quem faz a Âmbar acontecer, da chegada à despedida, com escuta, dados e respeito.</p>
+      </div>
+      <svg class="jl-caminho" viewBox="0 0 600 300" fill="none">
+        <path class="jl-trilha-base" d="M10 260C140 260 150 150 300 150S470 40 590 40"/>
+        <path class="jl-trilha" d="M10 260C140 260 150 150 300 150S470 40 590 40"/>
+        <g class="jl-marco m1"><circle cx="89" cy="243" r="22"/>
+          <g class="jl-ic" transform="translate(89 243)"><path d="M0 10V-2"/><path d="M0 2C-6 2-9-2-9-7-4-7 0-4 0 2Z"/><path d="M0-1C0-6 3-10 9-10 9-5 6-1 0-1Z"/></g>
+          <text x="124" y="236" class="jl-rot">Chegada</text><text x="124" y="256" class="jl-sub">Avaliação de experiência</text></g>
+        <g class="jl-marco m2"><circle cx="300" cy="150" r="22"/>
+          <g class="jl-ic" transform="translate(300 150)"><path d="M-9 7L-3 0 2 4 9-5"/><path d="M3-5H9V1"/></g>
+          <text x="300" y="198" class="jl-rot" text-anchor="middle">Crescimento</text><text x="300" y="218" class="jl-sub" text-anchor="middle">Desenvolvimento</text></g>
+        <g class="jl-marco m3"><circle cx="528" cy="51" r="22"/>
+          <g class="jl-ic" transform="translate(528 51)"><path class="cheio" d="M-7 3A7 7 0 0 1 7 3Z"/><path d="M-11 3H11"/><path d="M-6 8H6"/></g>
+          <text x="528" y="99" class="jl-rot" text-anchor="middle">Despedida</text><text x="528" y="119" class="jl-sub" text-anchor="middle">Entrevista de desligamento</text></g>
+      </svg>
+    </section>
+
+    <section class="jl-acesso">
+      <form class="jl-form" id="form-login" novalidate>
+        <span class="jl-ola" id="jl-ola">Olá! 👋</span>
+        <h2>Que bom ter você aqui.</h2>
+        <p class="jl-intro">Entre para cuidar da jornada das nossas pessoas.</p>
+        <label for="senha">Senha do RH</label>
+        <div class="jl-senha">
+          <input id="senha" type="password" autocomplete="current-password" placeholder="Digite sua senha" required>
+          <button type="button" id="jl-ver" aria-label="Mostrar senha" title="Mostrar senha">👁</button>
+        </div>
+        <p class="jl-caps" id="jl-caps" hidden>⇪ O Caps Lock está ativado</p>
+        <p class="jl-erro" id="jl-erro" role="alert"></p>
+        <button class="jl-entrar" type="submit"><span>Entrar na Jornada</span> <b aria-hidden="true">→</b></button>
+        <p class="jl-dica">🔒 Acesso exclusivo do time de RH. Esqueceu a senha? Fale com o responsável pela plataforma.</p>
+      </form>
+      <div class="jl-processos">
+        <span><img src="img/favicon-experiencia.svg" alt=""> Avaliação de Experiência</span>
+        <span><img src="img/favicon-desligamento.svg" alt=""> Entrevista de Desligamento</span>
+      </div>
+    </section>
   </div>
 
   <aside class="lateral" id="lateral" hidden>
@@ -178,7 +212,8 @@
           <h3>⚙️ Configurações</h3>
           <div class="dsl-campos">
             <label class="largo">Título<input class="campo" id="xf-titulo" maxlength="120"></label>
-            <label class="largo">Orientação ao gestor<textarea class="campo" id="xf-introducao" rows="2" maxlength="2000"></textarea></label>
+            <label class="largo">Instrução curta (aparece no topo das perguntas)<textarea class="campo" id="xf-introducao" rows="2" maxlength="2000"></textarea></label>
+            <label class="largo">Mensagem ao gestor na abertura <small>· separe os parágrafos com uma linha em branco: o 1º aparece em destaque, o último vira o lema e o texto completo abre em “Ler a orientação completa”</small><textarea class="campo" id="xf-orientacao" rows="8" maxlength="6000"></textarea></label>
             <label>Duração do 1º período (dias)<input class="campo" id="xf-p1" type="number" min="1" max="180"></label>
             <label>Duração total até o fim do 2º período (dias)<input class="campo" id="xf-p2" type="number" min="1" max="180"></label>
             <label>Devolver com antecedência de (dias)<input class="campo" id="xf-antecedencia" type="number" min="0" max="60"></label>

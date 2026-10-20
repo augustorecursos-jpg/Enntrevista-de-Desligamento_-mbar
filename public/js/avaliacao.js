@@ -102,7 +102,9 @@ function xpRender() {
             <textarea class="xp-campo" name="comentario" rows="4" maxlength="4000" placeholder="Pontos fortes, pontos a desenvolver, combinados com o colaborador…"></textarea></label>
           <label class="xp-q larga" data-parecer="gestor_nome"><span class="xp-q-texto">Seu nome (assinatura do gestor) <b class="obrig">*</b></span>
             <input class="xp-campo" name="gestor_nome" maxlength="200" value="${esc(d.pessoa.gestor || '')}"><p class="xp-erro"></p></label>
-          <button class="xp-enviar" type="submit">Enviar avaliação <span aria-hidden="true">→</span></button>
+          <label class="xp-acordo"><input type="checkbox" name="colaborador_de_acordo">
+            <span><strong>Colaborador de acordo</strong><small>Conversei com ${esc(d.pessoa.nome.split(' ')[0])} sobre esta avaliação e ele(a) está de acordo.</small></span></label>
+          <button class="xp-enviar" type="submit" disabled title="Marque “Colaborador de acordo” para enviar">Enviar avaliação <span aria-hidden="true">→</span></button>
           <p class="xp-nota">Depois do envio, ${esc(d.pessoa.nome.split(' ')[0])} recebe a avaliação para registrar a ciência.</p>
         </section>
       </form>
@@ -140,6 +142,11 @@ function xpMudou(e) {
   if (caixa) { caixa.classList.remove('faltando'); caixa.querySelector('.xp-erro') && (caixa.querySelector('.xp-erro').textContent = ''); }
   const outro = caixa?.querySelector('.xp-outro');
   if (outro) outro.hidden = !caixa.querySelector('input[value="Outros"]:checked');
+  if (e.target.name === 'colaborador_de_acordo') {
+    const btn = xpRaiz.querySelector('.xp-enviar');
+    btn.disabled = !e.target.checked;
+    btn.title = e.target.checked ? '' : 'Marque “Colaborador de acordo” para enviar';
+  }
   if (e.target.name === 'decisao') {
     const dias = xpRaiz.querySelector('.xp-dias');
     dias.hidden = e.target.value !== 'Prorrogar';
@@ -199,6 +206,11 @@ async function xpEnviar() {
   if (!decisao) marcar(f.querySelector('[data-parecer="decisao"]'), 'Escolha a decisão.');
   else if (decisao === 'Prorrogar' && !(dias >= 1 && dias <= 90)) marcar(f.querySelector('[data-parecer="decisao"]'), 'Informe os dias de prorrogação (1 a 90).');
   if (!gestorNome) marcar(f.querySelector('[data-parecer="gestor_nome"]'), 'Informe seu nome.');
+  const deAcordo = f.querySelector('[name="colaborador_de_acordo"]').checked;
+  if (!primeira && !deAcordo) {
+    f.querySelector('.xp-acordo').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return toast('Marque “Colaborador de acordo” para enviar a avaliação.', 'erro');
+  }
   if (primeira) {
     primeira.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return toast('Há campos obrigatórios sem resposta.', 'erro');
@@ -208,13 +220,87 @@ async function xpEnviar() {
   btn.disabled = true;
   try {
     await api(`/api/experiencia/${encodeURIComponent(xpToken)}`, { method: 'POST', body: {
-      respostas, parecer: { classificacao, decisao, prorrogar_dias: decisao === 'Prorrogar' ? dias : null, comentario: f.querySelector('[name="comentario"]').value, gestor_nome: gestorNome },
+      respostas, parecer: { classificacao, decisao, prorrogar_dias: decisao === 'Prorrogar' ? dias : null, comentario: f.querySelector('[name="comentario"]').value, gestor_nome: gestorNome, colaborador_de_acordo: deAcordo },
     } });
     xpFinal('Avaliação enviada!', `Obrigado. O RH vai colher a ciência de ${xpDados.pessoa.nome.split(' ')[0]} e você não precisa fazer mais nada.`);
   } catch (err) { btn.disabled = false; toast(err.message, 'erro'); }
 }
 
+// ---------- Abertura "nascer do sol" (antes das perguntas) ----------
+const xpDiasEntre = (de, ate) => Math.round((new Date(`${ate}T12:00:00`) - new Date(`${de}T12:00:00`)) / 864e5);
+const xpHojeIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const xpParagrafos = (t) => String(t || '').split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+
+function xpBoasVindas() {
+  const d = xpDados;
+  const nome1 = d.pessoa.nome.split(' ')[0];
+  const gestor1 = (d.pessoa.gestor || '').split(' ')[0];
+  const total = Math.max(1, xpDiasEntre(d.pessoa.admissao, d.vencimento) + 1);
+  const dia = Math.min(total, Math.max(1, xpDiasEntre(d.pessoa.admissao, xpHojeIso()) + 1));
+  const encerrado = xpHojeIso() > d.vencimento;
+  const pz = xpPrazo(d.prazo);
+  const par = xpParagrafos(d.form.orientacao);
+  const lead = par[0] || '';
+  const lema = par.length > 1 ? par[par.length - 1].split(/(?<=\.)\s+/) : [];
+  const perguntas = d.form.secoes.reduce((n, s) => n + s.perguntas.length, 0);
+  document.body.classList.add('xp-inicio');
+  xpRaiz.innerHTML = `
+    <div class="xp-bv">
+      <aside class="xp-bv-lado">
+        <span class="xp-bv-raio r1"></span><span class="xp-bv-raio r2"></span><span class="xp-bv-sol"></span><span class="xp-bv-horizonte"></span>
+        <span class="logo"><b>Âmbar</b><small>ENERGIA</small></span>
+        <div class="xp-bv-texto">
+          <p class="xp-bv-kick">JORNADA ÂMBAR · ${esc(d.form.titulo.toUpperCase())}</p>
+          <p class="xp-bv-frase">Todo bom começo<br>merece um <em>olhar atento.</em></p>
+          ${lead ? `<p class="xp-bv-lead">${esc(lead)}</p>` : ''}
+          ${lema.length ? `<ul class="xp-bv-lema">${lema.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
+          ${par.length > 1 ? '<button type="button" class="xp-bv-ler" data-orientacao>Ler a orientação completa ao gestor →</button>' : ''}
+        </div>
+        <div class="xp-bv-ficha">
+          <div class="xp-bv-ficha-cab"><span class="xp-avatar">${esc(xpIniciais(d.pessoa.nome))}</span>
+            <div><strong>${esc(d.pessoa.nome)}</strong><small>${esc([d.pessoa.cargo, d.pessoa.setor, d.pessoa.chapa && 'Chapa ' + d.pessoa.chapa].filter(Boolean).join(' · '))}</small></div></div>
+          <div class="xp-bv-trilha"><div class="xp-bv-barra"><i style="width:${(dia / total) * 100}%"></i><b style="left:${(dia / total) * 100}%"></b></div>
+            <p><span>Admissão ${xpData(d.pessoa.admissao).slice(0, 5)}</span><strong>${encerrado ? 'Período encerrado' : `Dia ${dia} de ${total}`}</strong><span>Vence ${xpData(d.vencimento).slice(0, 5)}</span></p></div>
+        </div>
+      </aside>
+      <section class="xp-bv-palco">
+        ${xpPrevia ? '<p class="xp-aviso">👁 Pré-visualização com dados de exemplo · nada será enviado</p>' : ''}
+        <div class="xp-bv-conteudo">
+          <p class="xp-bv-tit">${esc(d.form.titulo.toUpperCase())}</p>
+          <h1>${gestor1 ? `${esc(gestor1)}, como` : 'Como'} está sendo<br><em>a chegada de ${esc(nome1)}?</em></h1>
+          <p class="xp-bv-intro">Sua avaliação do ${d.periodo}º período ajuda a decidir o próximo passo e a dar um retorno justo para quem está começando. ${esc(d.form.introducao)}</p>
+          <ul class="xp-bv-fatos">
+            <li><strong>${perguntas}</strong><span>perguntas</span></li>
+            <li><strong>~5</strong><span>minutos</span></li>
+            <li class="${pz.classe}"><strong>${xpData(d.prazo).slice(0, 5)}</strong><span>devolver até · ${pz.texto}</span></li>
+          </ul>
+          <div class="xp-bv-acoes">
+            <button type="button" class="xp-enviar" data-comecar>Começar avaliação <span aria-hidden="true">→</span></button>
+            ${par.length ? '<button type="button" class="xp-bv-link" data-orientacao>📖 Orientação ao gestor</button>' : ''}
+          </div>
+        </div>
+      </section>
+    </div>
+    <dialog class="xp-orientacao" id="xp-orientacao">
+      <small class="xp-bv-kick">ORIENTAÇÃO AO GESTOR</small>
+      ${par.map((t, i) => (i === par.length - 1 && par.length > 1
+        ? `<p class="xp-or-lema">${t.split(/(?<=\.)\s+/).map(esc).join('<br>')}</p>`
+        : `<p${i === 0 ? ' class="xp-or-lead"' : ''}>${esc(t)}</p>`)).join('')}
+      <button type="button" class="xp-enviar" data-fechar-orientacao>Entendi, vamos começar →</button>
+    </dialog>`;
+  xpRaiz.querySelectorAll('[data-orientacao]').forEach(b => b.addEventListener('click', () => document.getElementById('xp-orientacao').showModal()));
+  xpRaiz.querySelector('[data-fechar-orientacao]').addEventListener('click', () => { document.getElementById('xp-orientacao').close(); xpComecar(); });
+  xpRaiz.querySelector('[data-comecar]').addEventListener('click', xpComecar);
+}
+
+function xpComecar() {
+  document.body.classList.remove('xp-inicio');
+  window.scrollTo(0, 0);
+  xpRender();
+}
+
 function xpFinal(titulo, texto) {
+  document.body.classList.remove('xp-inicio');
   window.scrollTo(0, 0);
   xpRaiz.innerHTML = `<section class="xp-final"><span class="xp-selo">✓</span><h1>${esc(titulo)}</h1><p>${esc(texto)}</p></section>`;
 }
@@ -224,7 +310,7 @@ function xpFinal(titulo, texto) {
     if (xpPrevia) {
       const form = await api('/api/admin/experiencia/formulario');
       const dia = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
-      xpDados = { form, periodo: 1, vencimento: dia(14), prazo: dia(4), pessoa: { nome: 'Colaborador de Exemplo', cargo: 'Cargo', setor: 'Setor', gestor: 'Gestor de Exemplo', admissao: dia(-31), chapa: '000000' },
+      xpDados = { form, periodo: 1, vencimento: dia(13), prazo: dia(3), pessoa: { nome: 'Colaborador de Exemplo', cargo: 'Cargo', setor: 'Setor', gestor: 'Gestor de Exemplo', admissao: dia(-31), chapa: '000000' },
         classificacoes: ['Possui ótimas perspectivas para o futuro', 'Tem algumas possibilidades futuras', 'Sem possibilidades futuras'], decisoes: ['Efetivar', 'Prorrogar', 'Rescindir'] };
     } else {
       if (!xpToken) throw new Error('Link incompleto. Procure o time de RH.');
@@ -235,5 +321,5 @@ function xpFinal(titulo, texto) {
   }
   if (xpDados.respondido_em) return xpFinal('Avaliação já enviada', `Você enviou esta avaliação em ${xpDataHora(xpDados.respondido_em)}. Obrigado!`);
   if (xpDados.status === 'dispensada') return xpFinal('Avaliação dispensada', 'A decisão do período anterior encerrou o contrato de experiência. Não é preciso responder.');
-  xpRender();
+  xpBoasVindas();
 })();
