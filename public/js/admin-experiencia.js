@@ -98,6 +98,7 @@ function renderInicio() {
   document.getElementById('ja-nums-dsl').innerHTML = n(dsl.convites.filter(x => x.status === 'pendente').length, 'convites aguardando')
     + n(dsl.respostas.filter(r => !r.recusou && r.criado_em.slice(0, 7) === mes).length, 'respondidas no mês')
     + n(dsl.respostas.filter(r => r.alerta).length, 'alertas', dsl.respostas.some(r => r.alerta) ? 'alerta' : '');
+  renderPcInicio();
 
   const limite = (() => { const d = new Date(); d.setDate(d.getDate() + 15); return d.toISOString().slice(0, 10); })();
   const agenda = xp.avaliacoes.filter(a => xpAtiva(a) && a.prazo <= limite).sort((a, b) => a.prazo.localeCompare(b.prazo));
@@ -128,18 +129,20 @@ function renderPessoas() {
   document.getElementById('pes-qtd').textContent = `· ${xp.pessoas.length} pessoa(s)`;
   const chip = (a) => (a ? `<span class="selo-st ${XP_STATUS[a.status][1]}" title="Vence ${xpData(a.vencimento)}">${XP_STATUS[a.status][0]}${a.decisao ? ` · ${esc(a.decisao)}` : ''}</span>` : '–');
   document.getElementById('pes-tabela').innerHTML = `
-    <tr><th>Colaborador</th><th>Setor${ehAdmin() ? ' / regional' : ''}</th><th>Gestor</th><th>Admissão</th><th>1º período</th><th>2º período</th><th>Desligamento</th><th></th></tr>
+    <tr><th>Colaborador</th><th>Setor${ehAdmin() ? ' / regional' : ''}</th><th>Gestor</th><th>Admissão</th><th>15 dias</th><th>1º período</th><th>2º período</th><th>Desligamento</th><th></th></tr>
     ${lista.map(p => {
       const av = (n) => xp.avaliacoes.find(a => a.pessoa_id === p.id && a.periodo === n);
       const d = xpDesligamentoDe(p);
+      const pc = pcx.convites.find(c => c.pessoa_id === p.id);
       return `<tr>
         <td><strong>${esc(p.nome)}</strong><small class="sub">${esc([p.cargo, p.chapa && 'Chapa ' + p.chapa].filter(Boolean).join(' · '))}</small></td>
         <td>${esc(p.setor || '–')}${ehAdmin() ? `<small class="sub">${esc(p.regional || 'sem regional')}</small>` : ''}</td><td>${esc(p.gestor || '–')}</td><td>${xpData(p.admissao)}</td>
+        <td>${pc ? `<span class="selo-st ${PC_STATUS[pc.status][1]}" title="Primeiras Conexões · responder até ${xpData(pc.prazo)}">${PC_STATUS[pc.status][0]}</span>` : '–'}</td>
         <td>${chip(av(1))}</td><td>${chip(av(2))}</td>
         <td>${d ? `<span class="selo-st ${DSL_STATUS[d.status][1]}">${DSL_STATUS[d.status][0]}</span>` : '–'}</td>
         <td><button type="button" class="btn btn-claro btn-sm" data-ficha="${p.id}">Ficha</button></td>
       </tr>`;
-    }).join('') || `<tr><td colspan="8">${xp.pessoas.length ? 'Nada encontrado.' : 'Ninguém cadastrado ainda. Use “+ Nova pessoa” ou importe a planilha de admissões.'}</td></tr>`}`;
+    }).join('') || `<tr><td colspan="9">${xp.pessoas.length ? 'Nada encontrado.' : 'Ninguém cadastrado ainda. Use “+ Nova pessoa” ou importe a planilha de admissões.'}</td></tr>`}`;
 }
 document.getElementById('pes-busca').addEventListener('input', renderPessoas);
 
@@ -178,7 +181,7 @@ document.getElementById('form-pessoa').addEventListener('submit', async (e) => {
     else await api('/api/admin/pessoas', { method: 'POST', body: dados });
     document.getElementById('modal-pessoa').close();
     toast(xpPessoaEditando ? 'Cadastro atualizado ✅' : 'Pessoa cadastrada ✅ Avaliações do 1º e 2º período criadas.');
-    await xpCarregar();
+    await Promise.all([xpCarregar(), pcCarregar()]);
     renderVisaoAtual();
     if (xpPessoaEditando && document.getElementById('modal-ficha').open) xpAbrirFicha(xpPessoaEditando.id);
   } catch (err) { toast(err.message, 'erro'); }
@@ -218,6 +221,7 @@ function xpAbrirFicha(id) {
     </div>
     <ol class="tl">
       ${etapa('🎉', 'Admissão', xpData(p.admissao), '', 'feita')}
+      ${pcEtapaFicha(p)}
       ${etapaAv(av[0])}${etapaAv(av[1])}
       ${etapa('🚪', 'Desligamento', d?.data ? xpData(d.data) : '', corpoDsl, d ? 'feita' : 'futura')}
     </ol>`;
@@ -236,7 +240,7 @@ document.addEventListener('click', async (e) => {
     if (!confirm(`Excluir ${p.nome} e as avaliações de experiência dele(a)? A entrevista de desligamento, se houver, é mantida.`)) return;
     await api(`/api/admin/pessoas/${p.id}`, { method: 'DELETE' });
     document.getElementById('modal-ficha').close();
-    await xpCarregar();
+    await Promise.all([xpCarregar(), pcCarregar()]);
     return renderVisaoAtual();
   }
   const iniciar = e.target.closest('[data-iniciar-dsl]');
@@ -313,7 +317,7 @@ document.getElementById('pes-importar').addEventListener('click', async () => {
     document.getElementById('pes-previa').innerHTML = r.invalidas.length ? r.invalidas.slice(0, 10).map(i => `Linha ${i.linha}: ${esc(i.motivo)}`).join('<br>') : '';
     document.getElementById('pes-arquivo').value = '';
     document.getElementById('pes-importar').disabled = true;
-    await xpCarregar();
+    await Promise.all([xpCarregar(), pcCarregar()]);
     renderPessoas();
   } catch (err) { toast(err.message, 'erro'); }
 });

@@ -1,6 +1,6 @@
-// Editor de seções e perguntas reutilizável (usado pela avaliação de experiência).
+// Editor de seções e perguntas reutilizável (avaliação de experiência e Primeiras Conexões).
 // criarEditorFormulario(container, opcoes) → { carregar(secoes), secoes() }
-function criarEditorFormulario(container, { rotuloSecao = 'Seção', presets = {}, tipos }) {
+function criarEditorFormulario(container, { rotuloSecao = 'Seção', presets = {}, tipos, camposSecao = false }) {
   const TIPOS = tipos || { unica: 'Escolha única', multipla: 'Múltipla seleção', grade: 'Grade (itens × escala)', curto: 'Texto curto', texto: 'Texto longo', data: 'Data' };
   const linhas = (lista) => (lista || []).join('\n');
   const separa = (txt) => String(txt || '').split('\n').map(s => s.trim()).filter(Boolean);
@@ -19,6 +19,8 @@ function criarEditorFormulario(container, { rotuloSecao = 'Seção', presets = {
           </span>
         </div>
         <input class="campo" data-campo="titulo" value="${esc(sec.titulo)}" placeholder="Título (ex.: Relacionamento interpessoal)">
+        ${camposSecao ? `<input class="campo" data-campo="subtitulo" value="${esc(sec.subtitulo || '')}" placeholder="Subtítulo (aparece para quem responde)">
+        <input class="campo" data-campo="objetivo" value="${esc(sec.objetivo || '')}" placeholder="Objetivo (só para o RH)">` : ''}
         <div class="perguntas-edit">
           ${sec.perguntas.map((p, j) => {
             const comOpcoes = ['unica', 'multipla', 'grade'].includes(p.tipo);
@@ -40,6 +42,9 @@ function criarEditorFormulario(container, { rotuloSecao = 'Seção', presets = {
               ${comOpcoes ? `<label class="extra">${p.tipo === 'grade' ? 'Escala de resposta' : 'Opções'} <small>(uma por linha, da melhor para a pior)</small>
                 <textarea class="campo" data-campo="opcoes" rows="${Math.min(8, Math.max(2, separa(p.opcoes).length))}">${esc(p.opcoes)}</textarea>
                 <span class="presets">Usar: ${Object.entries(presets).map(([k, [rotulo]]) => `<button type="button" data-preset="${k}">${esc(rotulo)}</button>`).join('')}</span></label>` : ''}
+              ${p.tipo === 'nota' ? `<label class="extra">Rótulos das pontas da escala (0 e 10) <small>(opcionais)</small>
+                <span class="linha-form"><input class="campo" data-campo="extremo0" value="${esc(p.extremo0 || '')}" placeholder="Ex.: Nada provável">
+                <input class="campo" data-campo="extremo1" value="${esc(p.extremo1 || '')}" placeholder="Ex.: Extremamente provável"></span></label>` : ''}
               <div class="extra dsl-flags">
                 <label class="check"><input type="checkbox" data-campo="obrigatoria" ${p.obrigatoria ? 'checked' : ''}> Obrigatória</label>
                 <label class="check"><input type="checkbox" data-campo="justificativa" ${p.justificativa ? 'checked' : ''}> Pedir justificativa</label>
@@ -104,8 +109,8 @@ function criarEditorFormulario(container, { rotuloSecao = 'Seção', presets = {
   return {
     carregar(secoes) {
       estado = structuredClone(secoes).map(sec => ({
-        titulo: sec.titulo,
-        perguntas: sec.perguntas.map(p => ({ ...p, opcoes: linhas(p.opcoes), itens: linhas(p.itens), alerta: p.alerta || '' })),
+        ...sec,
+        perguntas: sec.perguntas.map(p => ({ ...p, opcoes: linhas(p.opcoes), itens: linhas(p.itens), alerta: p.alerta || '', extremo0: p.extremos?.[0] || '', extremo1: p.extremos?.[1] || '' })),
       }));
       render();
     },
@@ -114,6 +119,6 @@ function criarEditorFormulario(container, { rotuloSecao = 'Seção', presets = {
       render();
       container.lastElementChild.querySelector('input').focus();
     },
-    secoes: () => estado.map(sec => ({ titulo: sec.titulo, perguntas: sec.perguntas.map(p => ({ ...p, opcoes: separa(p.opcoes), itens: separa(p.itens) })) })),
+    secoes: () => estado.map(sec => ({ ...sec, perguntas: sec.perguntas.map(({ extremo0, extremo1, ...p }) => ({ ...p, opcoes: separa(p.opcoes), itens: separa(p.itens), extremos: [extremo0, extremo1] })) })),
   };
 }

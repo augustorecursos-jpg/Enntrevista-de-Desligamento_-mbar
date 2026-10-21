@@ -5,7 +5,7 @@ const QRCode = require('qrcode');
 const { db } = require('./db');
 
 const CHAVE_FORM = 'entrevista_desligamento';
-const TIPOS = ['unica', 'multipla', 'grade', 'texto', 'curto', 'data'];
+const TIPOS = ['unica', 'multipla', 'grade', 'texto', 'curto', 'data', 'nota'];
 const COM_OPCOES = ['unica', 'multipla', 'grade'];
 const IDENTIFICACAO = ['nome', 'matricula', 'cargo', 'area', 'gestor', 'data_admissao', 'data_desligamento'];
 
@@ -149,6 +149,8 @@ function lerFormulario(body) {
         pergunta.itens = [...new Set((Array.isArray(p.itens) ? p.itens : []).map(o => texto(o, 200)).filter(Boolean))];
         if (!pergunta.itens.length) return { erro: `"${enunciado}": informe os itens avaliados (uma linha para cada).` };
       }
+      // Nota de 0 a 10: rótulos opcionais das pontas (ex.: "Nada provável" · "Extremamente provável").
+      if (tipo === 'nota') pergunta.extremos = [0, 1].map(k => texto(p.extremos?.[k], 80));
       if (tipo === 'unica' || tipo === 'multipla') {
         pergunta.outro = Boolean(p.outro);
         const alerta = texto(p.alerta, 200);
@@ -158,7 +160,9 @@ function lerFormulario(body) {
     }
     if (!titulo && !perguntas.length) continue;
     if (!titulo || !perguntas.length) return { erro: `Seção ${i + 1}: informe o título e ao menos uma pergunta.` };
-    secoes.push({ titulo, perguntas });
+    // Subtítulo e objetivo são opcionais (usados pelo Primeiras Conexões).
+    const extra = Object.fromEntries(['subtitulo', 'objetivo'].map(k => [k, texto(sec[k], 300)]).filter(([, v]) => v));
+    secoes.push({ titulo, ...extra, perguntas });
   }
   if (!secoes.length) return { erro: 'Cadastre ao menos uma seção com perguntas.' };
   return {
@@ -202,6 +206,10 @@ function lerRespostas(form, recebidas) {
       } else if (p.tipo === 'data') {
         valor = dataValida(r.valor);
         vazio = !valor;
+      } else if (p.tipo === 'nota') {
+        vazio = r.valor === undefined || r.valor === null || r.valor === '';
+        valor = vazio ? null : Number(r.valor);
+        if (!vazio && !(Number.isInteger(valor) && valor >= 0 && valor <= 10)) return { erro: `Escolha uma nota de 0 a 10 em "${p.texto}".` };
       } else {
         valor = texto(r.valor, p.tipo === 'curto' ? 300 : 3000);
         vazio = !valor;

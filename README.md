@@ -3,6 +3,8 @@
 **Cuidando de cada etapa.** Plataforma do RH para os processos da jornada do colaborador, nas cores da Âmbar
 (azul-marinho `#0e3b5c` e laranja `#ec6b24`). Na tela inicial o RH escolhe o processo:
 
+- 🤝 **Primeiras Conexões**: nos primeiros 15 dias, o **colaborador** conta como foi a chegada (pré-onboarding, primeiro
+  dia, equipe, liderança, estrutura, integração, pertencimento e notas de 0 a 10); o RH acompanha e vê o índice de acolhimento e o eNPS.
 - 🌱 **Avaliação de Experiência**: o **gestor** avalia o 1º e o 2º período por um link (WhatsApp, e-mail ou QR Code);
   o **colaborador** registra a ciência digital; o RH acompanha prazos, decisões (Efetivar · Prorrogar · Rescindir) e indicadores.
 - 🚪 **Entrevista de Desligamento**: versão digital do formulário PRESI-RH-0002, respondida por quem está saindo.
@@ -14,6 +16,8 @@ Tudo é editável pelo RH (perguntas, prazos e mensagens) e exporta para Excel.
 | Endereço | Para quem | O que faz |
 |---|---|---|
 | `/admin.html` (ou `/`) | RH (e-mail e senha; master: `admin`) | Início, Pessoas, Avaliação de Experiência e Entrevista de Desligamento |
+| `/conexoes.html?t=<código>` | Colaborador | Primeiras Conexões (avaliação dos primeiros 15 dias) |
+| `/conexoes.html?previa=1` | RH | Pré-visualização das Primeiras Conexões (nada é enviado) |
 | `/avaliacao.html?t=<código>` | Gestor | Avaliação de experiência de um colaborador (1º ou 2º período) |
 | `/ciencia.html?t=<código>` | Colaborador | Lê a avaliação e registra a ciência (substitui a assinatura em papel) |
 | `/avaliacao.html?previa=1` | RH | Pré-visualização do formulário de experiência |
@@ -29,6 +33,15 @@ Tudo é editável pelo RH (perguntas, prazos e mensagens) e exporta para Excel.
   calculado pela admissão (padrão 45 e 90 dias) e o prazo de devolução (padrão 10 dias antes). Cada pessoa tem uma
   **ficha com linha do tempo**: Admissão → 1º período → 2º período → Desligamento, e dali se inicia a entrevista de
   desligamento já com os dados preenchidos.
+- **Primeiras Conexões** (um convite por pessoa cadastrada, criado automaticamente)
+  - *Acompanhar*: quadro **Em breve → A enviar → Aguardando resposta → Respondidas**. O link fica pronto no 12º dia de
+    casa e o prazo é o 15º (editável). Envio por WhatsApp/e-mail/link/QR Code. Quem já tinha mais de 45 dias de casa ao
+    ser cadastrado entra como *dispensado* (dá para reativar). Respostas confidenciais, vistas só pelo RH.
+  - *Indicadores*: índice de acolhimento (% Concordo + Concordo totalmente), nota média da experiência, eNPS do
+    onboarding, taxa de resposta, respondidas no prazo, % de concordância por conexão e por afirmação, distribuição das
+    notas, por setor, falas abertas e a lista **Para agir agora** (discordâncias, nota até 6 e pendências de estrutura).
+    Exporta Excel (*Primeiras_Conexoes* e *Base_indicadores*).
+  - *Formulário*: texto de abertura (integral, editável), conexões, afirmações, perguntas abertas e notas, dias de envio e prazo.
 - **Avaliação de Experiência**
   - *Acompanhar*: quadro **A enviar → Com o gestor → Aguardando ciência → Concluídas**, com etiquetas de prazo
     (verde, laranja, vermelho), aviso de que o gestor abriu o link, envio por WhatsApp/e-mail/link/QR Code, ciência
@@ -105,8 +118,9 @@ npm start          # http://localhost:3000  (senha padrão de teste: ambar-rh)
 
 ```
 server.js          servidor (login do RH, backup, arquivos estáticos)
+conexoes.js        Primeiras Conexões: formulário padrão, convites de 15 dias, respostas e QR Code (API)
 experiencia.js     avaliação de experiência: pessoas, avaliação do gestor, ciência e QR Code (API)
 desligamento.js    entrevista de desligamento: formulário padrão, convites, respostas e QR Code (API)
 db.js              banco SQLite nativo do Node (sem banco externo)
-public/            avaliacao.html (gestor), ciencia.html e desligamento.html (colaborador), admin.html (RH)
+public/            avaliacao.html (gestor), conexoes.html, ciencia.html e desligamento.html (colaborador), admin.html (RH)
 ```
