@@ -5,6 +5,7 @@ const xp = { pessoas: [], avaliacoes: [], form: null, carregado: false };
 const XP_STATUS = {
   a_enviar: ['A enviar', 'st-pendente'], com_gestor: ['Com o gestor', 'st-gestor'], aguardando_ciencia: ['Aguardando ciência', 'st-recusa'],
   concluida: ['Concluída', 'st-ok'], aguardando_1: ['Aguarda o 1º período', 'st-pendente'], dispensada: ['Dispensada', 'st-pendente'],
+  encerrada: ['Fora do período', 'st-pendente'],
 };
 const XP_COLUNAS = [
   ['a_enviar', 'A enviar', 'Envie o link ao gestor'],
@@ -196,7 +197,7 @@ function xpAbrirFicha(id) {
     <div><p class="tl-tit"><strong>${titulo}</strong><small>${quando}</small></p>${corpo}</div></li>`;
   const etapaAv = (a) => {
     if (!a) return '';
-    const est = a.status === 'concluida' ? 'feita' : a.status === 'dispensada' ? 'dispensada' : xpAtiva(a) && a.prazo < xpHojeIso() ? 'atrasada' : 'atual';
+    const est = a.status === 'concluida' ? 'feita' : a.status === 'dispensada' || a.status === 'encerrada' ? 'dispensada' : xpAtiva(a) && a.prazo < xpHojeIso() ? 'atrasada' : 'atual';
     let corpo = `<span class="selo-st ${XP_STATUS[a.status][1]}">${XP_STATUS[a.status][0]}</span>`;
     if (a.decisao) corpo += ` <strong class="xp-decisao d-${a.decisao.toLowerCase()}">${esc(a.decisao)}${a.prorrogar_dias ? ` + ${a.prorrogar_dias} dias` : ''}</strong>`;
     if (xpAtiva(a)) corpo += `<p class="q-dica">Devolver até ${xpData(a.prazo)} · ${xpPrazo(a.prazo).texto}</p>${xpBotoesEnvio(a, 'gestor')}`;
@@ -464,7 +465,7 @@ function xpFiltradas() {
   const gestor = document.getElementById('xi-gestor').value;
   const de = document.getElementById('xi-de').value;
   const ate = document.getElementById('xi-ate').value;
-  return xp.avaliacoes.filter(a => a.status !== 'dispensada' && a.status !== 'aguardando_1' && (!regional || a.regional === regional) && (!per || String(a.periodo) === per) && (!setor || a.setor === setor)
+  return xp.avaliacoes.filter(a => !['dispensada', 'aguardando_1', 'encerrada'].includes(a.status) && (!regional || a.regional === regional) && (!per || String(a.periodo) === per) && (!setor || a.setor === setor)
     && (!gestor || a.gestor === gestor) && (!de || a.vencimento >= de) && (!ate || a.vencimento <= ate));
 }
 const xpPct = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : null);

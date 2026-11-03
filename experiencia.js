@@ -127,14 +127,19 @@ const somarDias = (iso, dias) => {
 const vencimentoPadrao = (admissao, dias) => somarDias(admissao, dias - 1);
 const novoToken = () => crypto.randomBytes(9).toString('base64url');
 
-/** Situação de cada avaliação, considerando a decisão do 1º período para liberar (ou dispensar) o 2º. */
-function situacao(a, p1) {
+const hoje = () => new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10); // horário de Brasília
+
+/**
+ * Situação de cada avaliação, considerando a decisão do 1º período para liberar (ou dispensar) o 2º.
+ * Sem resposta e com o período de experiência já encerrado (passou do vencimento do 2º período, já com a
+ * prorrogação), a avaliação fica "fora do período": não entra em "a enviar" nem em "atrasadas".
+ */
+function situacao(a, p1, fimExperiencia) {
   if (a.ciencia_em) return 'concluida';
   if (a.respondido_em) return 'aguardando_ciencia';
-  if (a.periodo === 2 && p1) {
-    if (p1.decisao === 'Efetivar' || p1.decisao === 'Rescindir') return 'dispensada';
-    if (!p1.respondido_em) return 'aguardando_1';
-  }
+  if (a.periodo === 2 && p1 && (p1.decisao === 'Efetivar' || p1.decisao === 'Rescindir')) return 'dispensada';
+  if (fimExperiencia && hoje() > fimExperiencia) return 'encerrada';
+  if (a.periodo === 2 && p1 && !p1.respondido_em) return 'aguardando_1';
   return a.enviado_em ? 'com_gestor' : 'a_enviar';
 }
 
@@ -144,11 +149,12 @@ function listarAvaliacoes(where = '', params = []) {
     SELECT a.*, p.nome, p.chapa, p.cargo, p.setor, p.regional, p.gestor, p.gestor_telefone, p.gestor_email, p.telefone, p.email, p.admissao
     FROM exp_avaliacoes a JOIN pessoas p ON p.id = a.pessoa_id ${where} ORDER BY a.vencimento, a.periodo`).all(...params);
   const primeiros = new Map(db.prepare('SELECT pessoa_id, decisao, respondido_em FROM exp_avaliacoes WHERE periodo = 1').all().map(r => [r.pessoa_id, r]));
+  const fins = new Map(db.prepare('SELECT pessoa_id, vencimento FROM exp_avaliacoes WHERE periodo = 2').all().map(r => [r.pessoa_id, r.vencimento]));
   return linhas.map(a => ({
     ...a,
     respostas: a.respostas ? JSON.parse(a.respostas) : [],
     prazo: somarDias(a.vencimento, -(Number(form.antecedencia) || 0)),
-    status: situacao(a, primeiros.get(a.pessoa_id)),
+    status: situacao(a, primeiros.get(a.pessoa_id), fins.get(a.pessoa_id)),
   }));
 }
 
