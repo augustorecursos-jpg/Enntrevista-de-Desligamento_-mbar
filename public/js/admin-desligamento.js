@@ -25,8 +25,14 @@ function dslEscala(opcoes) {
 }
 const dslPositiva = (escala, valor) => escala.indexOf(valor) > -1 && escala.indexOf(valor) < escala.length / 2;
 
-// Link individual (?c=) ou geral; o link geral do coordenador regional já leva a regional (?r=).
-const dslLink = (token) => `${location.origin}/desligamento.html${token ? `?c=${token}` : (jaUsuario?.regional ? `?r=${encodeURIComponent(jaUsuario.regional)}` : '')}`;
+// Link individual (?c=) ou geral; o link geral do coordenador já leva a regional (?r=) e o do analista, a usina (?u=).
+function dslGeralParams() {
+  const p = new URLSearchParams();
+  if (jaUsuario?.papel === 'analista') p.set('u', document.getElementById('dsl-link-usina').value || jaUsuario.usinas[0] || '');
+  else if (jaUsuario?.regional && !ehAdmin()) p.set('r', jaUsuario.regional);
+  return p.toString();
+}
+const dslLink = (token) => `${location.origin}/desligamento.html${token ? `?c=${token}` : (dslGeralParams() ? `?${dslGeralParams()}` : '')}`;
 const dslPrimeiroNome = (n) => String(n || '').trim().split(/\s+/)[0] || '';
 function dslMensagem(nome, link) {
   let m = dsl.form?.mensagem || '{link}';
@@ -90,7 +96,13 @@ function dslBotoesEnvio(c) {
     <button type="button" class="btn btn-claro btn-sm" data-qr-dsl="${esc(c.token)}" title="QR Code">📱</button>`;
 }
 
+document.getElementById('dsl-link-usina').addEventListener('change', () => dslRenderEnviar());
 function dslRenderEnviar() {
+  // Analista com mais de uma usina escolhe de qual usina é o link geral.
+  const selUsina = document.getElementById('dsl-link-usina');
+  const usinas = jaUsuario?.papel === 'analista' ? jaUsuario.usinas : [];
+  selUsina.hidden = usinas.length < 2;
+  if (usinas.length && !usinas.includes(selUsina.value)) selUsina.innerHTML = usinas.map(u => `<option>${esc(u)}</option>`).join('');
   const geral = dslLink('');
   const msg = dslMensagem('', geral);
   document.getElementById('dsl-link-geral').value = geral;
@@ -109,12 +121,12 @@ function dslRenderEnviar() {
   const pend = dsl.convites.filter(c => c.status === 'pendente').length;
   document.getElementById('dsl-qtd-convites').textContent = `· ${dsl.convites.length} convite(s) · ${pend} aguardando resposta`;
   document.getElementById('dsl-convites').innerHTML = `
-    <tr><th>Colaborador</th><th>Área${ehAdmin() ? ' / regional' : ''}</th><th>Desligamento</th><th>Situação</th><th>Enviar / reenviar</th><th></th></tr>
+    <tr><th>Colaborador</th><th>Área / ${ehAdmin() ? 'regional' : 'usina'}</th><th>Desligamento</th><th>Situação</th><th>Enviar / reenviar</th><th></th></tr>
     ${lista.map(c => {
       const [rot, cls] = DSL_STATUS[c.status];
       return `<tr>
         <td><strong>${esc(c.nome)}</strong><small class="sub">${esc([c.cargo, c.matricula && 'Mat. ' + c.matricula].filter(Boolean).join(' · '))}</small></td>
-        <td>${esc(c.area || '–')}${ehAdmin() ? `<small class="sub">${esc(c.regional || 'sem regional')}</small>` : ''}</td><td>${dslData(c.data_desligamento)}</td>
+        <td>${esc(c.area || '–')}<small class="sub">${esc([ehAdmin() ? c.regional || 'sem regional' : '', c.usina].filter(Boolean).join(' · '))}</small></td><td>${dslData(c.data_desligamento)}</td>
         <td><span class="selo-st ${cls}">${rot}</span>${c.respondido_em ? `<small class="sub">${dslDataHora(c.respondido_em)}</small>` : ''}</td>
         <td><div class="acoes-envio">${dslBotoesEnvio(c)}</div></td>
         <td><button type="button" class="q-rem" data-rem-convite="${c.id}" title="Excluir convite">🗑</button></td>
@@ -171,7 +183,8 @@ document.querySelector('[data-painel="desligamento"]').addEventListener('click',
 
 async function dslAbrirQr(token) {
   try {
-    const q = await api(`/api/admin/desligamento/qrcode${token ? `?c=${encodeURIComponent(token)}` : ''}`);
+    const params = token ? `c=${encodeURIComponent(token)}` : dslGeralParams();
+    const q = await api(`/api/admin/desligamento/qrcode${params ? `?${params}` : ''}`);
     document.getElementById('qr-rotulo').textContent = 'QR CODE · ENTREVISTA DE DESLIGAMENTO';
     document.getElementById('qr-dica').textContent = token
       ? 'Link individual: ao ler o QR Code, o colaborador abre a entrevista já identificada.'
@@ -179,7 +192,7 @@ async function dslAbrirQr(token) {
     document.getElementById('qr-titulo').textContent = q.titulo;
     document.getElementById('qr-img').innerHTML = q.svg;
     document.getElementById('qr-link').value = q.link;
-    document.getElementById('qr-baixar').href = `/api/admin/desligamento/qrcode?formato=png${token ? `&c=${encodeURIComponent(token)}` : ''}`;
+    document.getElementById('qr-baixar').href = `/api/admin/desligamento/qrcode?formato=png${params ? `&${params}` : ''}`;
     document.getElementById('modal-qr').showModal();
   } catch (err) { toast(err.message, 'erro'); }
 }
@@ -475,7 +488,7 @@ function dslExportar() {
   const curto = (t) => (t.length > 60 ? `${t.slice(0, 57)}…` : t);
 
   // Aba 1: uma linha por entrevista, uma coluna por pergunta (múltipla seleção também ganha uma coluna 0/1 por opção).
-  const cab = ['ID', 'Recebida em', 'Situação', 'Origem', 'Nome', 'Matrícula', 'Cargo', 'Regional', 'Área / Diretoria', 'Gestor imediato',
+  const cab = ['ID', 'Recebida em', 'Situação', 'Origem', 'Nome', 'Matrícula', 'Cargo', 'Regional', 'Usina', 'Área / Diretoria', 'Gestor imediato',
     'Data de admissão', 'Data de desligamento', 'Mês do desligamento', 'Tempo de casa (meses)', 'Responsável RH', 'Alerta'];
   const colunas = [];
   const col = (titulo, p, f) => colunas.push({ titulo, p, f });
@@ -492,7 +505,7 @@ function dslExportar() {
   }
   const linhas = dsl.respostas.map(r => [
     r.id, new Date(r.criado_em.replace(' ', 'T') + 'Z'), r.recusou ? 'Recusou' : 'Respondida', r.convite_id ? 'Convite individual' : 'Link geral',
-    r.nome, r.matricula, r.cargo, r.regional || '', r.area, r.gestor, dataCel(r.data_admissao), dataCel(r.data_desligamento), dslRef(r).slice(0, 7),
+    r.nome, r.matricula, r.cargo, r.regional || '', r.usina || '', r.area, r.gestor, dataCel(r.data_admissao), dataCel(r.data_desligamento), dslRef(r).slice(0, 7),
     dslMeses(r.data_admissao, r.data_desligamento) ?? '', r.responsavel_rh, r.alerta ? 'Sim' : 'Não',
     ...colunas.map(c => c.f(dslResp(r, c.p.id), r)),
   ]);

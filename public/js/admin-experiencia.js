@@ -126,18 +126,18 @@ function xpDesligamentoDe(p) {
 
 function renderPessoas() {
   const busca = dslNorm(document.getElementById('pes-busca').value);
-  const lista = xp.pessoas.filter(p => !busca || dslNorm([p.nome, p.chapa, p.cargo, p.setor, p.regional, p.gestor].join(' ')).includes(busca));
+  const lista = xp.pessoas.filter(p => !busca || dslNorm([p.nome, p.chapa, p.cargo, p.setor, p.regional, p.usina, p.gestor].join(' ')).includes(busca));
   document.getElementById('pes-qtd').textContent = `· ${xp.pessoas.length} pessoa(s)`;
   const chip = (a) => (a ? `<span class="selo-st ${XP_STATUS[a.status][1]}" title="Vence ${xpData(a.vencimento)}">${XP_STATUS[a.status][0]}${a.decisao ? ` · ${esc(a.decisao)}` : ''}</span>` : '–');
   document.getElementById('pes-tabela').innerHTML = `
-    <tr><th>Colaborador</th><th>Setor${ehAdmin() ? ' / regional' : ''}</th><th>Gestor</th><th>Admissão</th><th>15 dias</th><th>1º período</th><th>2º período</th><th>Desligamento</th><th></th></tr>
+    <tr><th>Colaborador</th><th>Setor / ${ehAdmin() ? 'regional · ' : ''}usina</th><th>Gestor</th><th>Admissão</th><th>15 dias</th><th>1º período</th><th>2º período</th><th>Desligamento</th><th></th></tr>
     ${lista.map(p => {
       const av = (n) => xp.avaliacoes.find(a => a.pessoa_id === p.id && a.periodo === n);
       const d = xpDesligamentoDe(p);
       const pc = pcx.convites.find(c => c.pessoa_id === p.id);
       return `<tr>
         <td><strong>${esc(p.nome)}</strong><small class="sub">${esc([p.cargo, p.chapa && 'Chapa ' + p.chapa].filter(Boolean).join(' · '))}</small></td>
-        <td>${esc(p.setor || '–')}${ehAdmin() ? `<small class="sub">${esc(p.regional || 'sem regional')}</small>` : ''}</td><td>${esc(p.gestor || '–')}</td><td>${xpData(p.admissao)}</td>
+        <td>${esc(p.setor || '–')}<small class="sub">${esc([ehAdmin() ? p.regional || 'sem regional' : '', p.usina].filter(Boolean).join(' · '))}</small></td><td>${esc(p.gestor || '–')}</td><td>${xpData(p.admissao)}</td>
         <td>${pc ? `<span class="selo-st ${PC_STATUS[pc.status][1]}" title="Primeiras Conexões · responder até ${xpData(pc.prazo)}">${PC_STATUS[pc.status][0]}</span>` : '–'}</td>
         <td>${chip(av(1))}</td><td>${chip(av(2))}</td>
         <td>${d ? `<span class="selo-st ${DSL_STATUS[d.status][1]}">${DSL_STATUS[d.status][0]}</span>` : '–'}</td>
@@ -213,7 +213,7 @@ function xpAbrirFicha(id) {
   document.getElementById('ficha-corpo').innerHTML = `
     <div class="ficha-topo">
       <span class="xp-avatar">${esc(xpIniciais(p.nome))}</span>
-      <div><strong>${esc(p.nome)}</strong><small>${esc([p.cargo, p.setor, p.regional && 'Regional ' + p.regional, p.chapa && 'Chapa ' + p.chapa].filter(Boolean).join(' · '))}</small>
+      <div><strong>${esc(p.nome)}</strong><small>${esc([p.cargo, p.setor, p.regional && 'Regional ' + p.regional, p.usina, p.chapa && 'Chapa ' + p.chapa].filter(Boolean).join(' · '))}</small>
         <small>Gestor: ${esc(p.gestor || '–')}${p.gestor_telefone ? ' · ' + esc(p.gestor_telefone) : ''}</small></div>
       <span class="ficha-acoes">
         <button type="button" class="btn btn-claro btn-sm" data-editar-pessoa="${p.id}">✏️ Editar</button>
@@ -249,7 +249,7 @@ document.addEventListener('click', async (e) => {
     const p = xp.pessoas.find(x => x.id === Number(iniciar.dataset.iniciarDsl));
     try {
       const { token } = await api('/api/admin/desligamento/convites', { method: 'POST', body: {
-        nome: p.nome, matricula: p.chapa, cargo: p.cargo, area: p.setor, regional: p.regional, gestor: p.gestor, data_admissao: p.admissao, telefone: p.telefone, email: p.email,
+        nome: p.nome, matricula: p.chapa, cargo: p.cargo, area: p.setor, regional: p.regional, usina: p.usina, gestor: p.gestor, data_admissao: p.admissao, telefone: p.telefone, email: p.email,
       } });
       dsl.convites = await api('/api/admin/desligamento/convites');
       const c = dsl.convites.find(x => x.token === token);
@@ -284,7 +284,7 @@ async function xpLerPlanilha(arquivo) {
   const achar = (...nomes) => cab.findIndex(c => nomes.includes(c));
   const col = {
     nome: achar('nome', 'nome colaborador', 'colaborador', 'nome completo'), chapa: achar('chapa', 'matricula', 'registro'),
-    cargo: achar('cargo', 'funcao'), setor: achar('setor', 'area', 'departamento'), regional: achar('regional', 'regiao', 'unidade'), gestor: achar('gestor', 'gestor imediato', 'lider'),
+    cargo: achar('cargo', 'funcao'), setor: achar('setor', 'area', 'departamento'), regional: achar('regional', 'regiao', 'unidade'), usina: achar('usina', 'planta', 'local', 'local de trabalho', 'unidade de trabalho', 'site'), gestor: achar('gestor', 'gestor imediato', 'lider'),
     admissao: achar('admissao', 'data de admissao', 'data admissao'),
     gestor_telefone: achar('telefone gestor', 'whatsapp gestor', 'celular gestor'), gestor_email: achar('email gestor', 'e mail gestor'),
     telefone: achar('telefone', 'whatsapp', 'celular', 'telefone colaborador'), email: achar('email', 'e mail', 'email colaborador'),
@@ -325,8 +325,8 @@ document.getElementById('pes-importar').addEventListener('click', async () => {
 document.getElementById('pes-modelo').addEventListener('click', () => {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
-    ['NOME', 'CHAPA', 'CARGO', 'SETOR', 'REGIONAL', 'GESTOR', 'ADMISSAO', 'TELEFONE GESTOR', 'EMAIL GESTOR', 'TELEFONE', 'EMAIL'],
-    ['Maria da Silva', '123456', 'Assistente de Logística', 'Logística', jaUsuario?.regional || 'Centro-Oeste', 'João Souza', new Date(), '(65) 99999-0000', 'joao@empresa.com', '(65) 98888-0000', 'maria@email.com'],
+    ['NOME', 'CHAPA', 'CARGO', 'SETOR', 'REGIONAL', 'USINA', 'GESTOR', 'ADMISSAO', 'TELEFONE GESTOR', 'EMAIL GESTOR', 'TELEFONE', 'EMAIL'],
+    ['Maria da Silva', '123456', 'Assistente de Logística', 'Logística', jaUsuario?.regional || 'Centro-Oeste', jaUsuario?.usinas?.[0] || 'UTE Cuiabá', 'João Souza', new Date(), '(65) 99999-0000', 'joao@empresa.com', '(65) 98888-0000', 'maria@email.com'],
   ], { cellDates: true, dateNF: 'dd/mm/yyyy' });
   ws['!cols'] = Array(11).fill({ wch: 20 });
   XLSX.utils.book_append_sheet(wb, ws, 'Admissões');
@@ -338,19 +338,23 @@ function xpPreencher(id, valores, rotulo) {
   const sel = document.getElementById(id);
   const atual = sel.value;
   sel.innerHTML = `<option value="">${rotulo}</option>` + valores.map(v => `<option ${v === atual ? 'selected' : ''}>${esc(v)}</option>`).join('');
+  // Filtros marcados com data-ocultar-vazio (ex.: usina) só aparecem quando há o que escolher.
+  if ('ocultarVazio' in sel.dataset) sel.hidden = valores.length < 2 && !atual;
 }
 const xpUnicos = (campo) => [...new Set(xp.avaliacoes.map(a => a[campo]).filter(Boolean))].sort();
 
 function renderKanban() {
   xpPreencher('kb-regional', xpUnicos('regional'), 'Todas as regionais');
+  xpPreencher('kb-usina', xpUnicos('usina'), 'Todas as usinas');
   xpPreencher('kb-setor', xpUnicos('setor'), 'Todos os setores');
   xpPreencher('kb-gestor', xpUnicos('gestor'), 'Todos os gestores');
   const per = document.getElementById('kb-periodo').value;
   const regional = document.getElementById('kb-regional').value;
+  const usina = document.getElementById('kb-usina').value;
   const setor = document.getElementById('kb-setor').value;
   const gestor = document.getElementById('kb-gestor').value;
   const busca = dslNorm(document.getElementById('kb-busca').value);
-  const lista = xp.avaliacoes.filter(a => (!regional || a.regional === regional) && (!per || String(a.periodo) === per) && (!setor || a.setor === setor) && (!gestor || a.gestor === gestor)
+  const lista = xp.avaliacoes.filter(a => (!regional || a.regional === regional) && (!usina || a.usina === usina) && (!per || String(a.periodo) === per) && (!setor || a.setor === setor) && (!gestor || a.gestor === gestor)
     && (!busca || dslNorm([a.nome, a.chapa, a.cargo, a.setor, a.gestor].join(' ')).includes(busca)));
   document.getElementById('kanban').innerHTML = XP_COLUNAS.map(([st, titulo, dica]) => {
     const cards = lista.filter(a => a.status === st).sort((a, b) => (st === 'concluida' ? (b.ciencia_em || '').localeCompare(a.ciencia_em || '') : a.prazo.localeCompare(b.prazo)));
@@ -360,7 +364,7 @@ function renderKanban() {
     </section>`;
   }).join('');
 }
-['kb-regional', 'kb-periodo', 'kb-setor', 'kb-gestor'].forEach(id => document.getElementById(id).addEventListener('change', renderKanban));
+['kb-regional', 'kb-usina', 'kb-periodo', 'kb-setor', 'kb-gestor'].forEach(id => document.getElementById(id).addEventListener('change', renderKanban));
 document.getElementById('kb-busca').addEventListener('input', renderKanban);
 
 function xpCartao(a) {
@@ -461,11 +465,12 @@ document.getElementById('xp-imprimir').addEventListener('click', () => {
 function xpFiltradas() {
   const per = document.getElementById('xi-periodo').value;
   const regional = document.getElementById('xi-regional').value;
+  const usina = document.getElementById('xi-usina').value;
   const setor = document.getElementById('xi-setor').value;
   const gestor = document.getElementById('xi-gestor').value;
   const de = document.getElementById('xi-de').value;
   const ate = document.getElementById('xi-ate').value;
-  return xp.avaliacoes.filter(a => !['dispensada', 'aguardando_1', 'encerrada'].includes(a.status) && (!regional || a.regional === regional) && (!per || String(a.periodo) === per) && (!setor || a.setor === setor)
+  return xp.avaliacoes.filter(a => !['dispensada', 'aguardando_1', 'encerrada'].includes(a.status) && (!regional || a.regional === regional) && (!usina || a.usina === usina) && (!per || String(a.periodo) === per) && (!setor || a.setor === setor)
     && (!gestor || a.gestor === gestor) && (!de || a.vencimento >= de) && (!ate || a.vencimento <= ate));
 }
 const xpPct = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : null);
@@ -475,6 +480,7 @@ const xpTempo = (a) => (a.respondido_em && a.enviado_em ? Math.max(0, xpDiasEntr
 
 function renderXpIndicadores() {
   xpPreencher('xi-regional', xpUnicos('regional'), 'Todas as regionais');
+  xpPreencher('xi-usina', xpUnicos('usina'), 'Todas as usinas');
   xpPreencher('xi-setor', xpUnicos('setor'), 'Todos os setores');
   xpPreencher('xi-gestor', xpUnicos('gestor'), 'Todos os gestores');
   const todas = xpFiltradas();
@@ -544,7 +550,7 @@ function renderXpIndicadores() {
     <tr><th>Colaborador</th><th>Admissão</th><th>Desligamento</th><th>Dias de casa</th><th>Gestor</th><th>O que o gestor avaliou</th><th>Por que saiu (entrevista)</th><th>Voltaria?</th></tr>
     ${linhas.join('') || '<tr><td colspan="8">Ninguém do cadastro saiu nos primeiros 90 dias (ou a entrevista de desligamento ainda não tem data de desligamento).</td></tr>'}`;
 }
-['xi-regional', 'xi-periodo', 'xi-setor', 'xi-gestor', 'xi-de', 'xi-ate'].forEach(id => document.getElementById(id).addEventListener('change', renderXpIndicadores));
+['xi-regional', 'xi-usina', 'xi-periodo', 'xi-setor', 'xi-gestor', 'xi-de', 'xi-ate'].forEach(id => document.getElementById(id).addEventListener('change', renderXpIndicadores));
 
 document.getElementById('xi-exportar').addEventListener('click', () => {
   const perguntas = xp.form.secoes.flatMap(s => s.perguntas.map(p => ({ ...p, secao: s.titulo })));
@@ -556,9 +562,9 @@ document.getElementById('xi-exportar').addEventListener('click', () => {
     else cols.push([`${p.secao} · ${p.texto}`, p, (r) => (Array.isArray(r?.valor) ? r.valor.join('; ') : r?.valor ?? '')]);
     if (p.justificativa) cols.push([`${p.texto} – Justificativa`, p, (r) => r?.justificativa ?? '']);
   }
-  const cab = ['ID', 'Nome', 'Chapa', 'Cargo', 'Regional', 'Setor', 'Gestor', 'Admissão', 'Período', 'Vencimento', 'Devolver até', 'Situação', 'Enviado ao gestor', 'Respondida em',
+  const cab = ['ID', 'Nome', 'Chapa', 'Cargo', 'Regional', 'Usina', 'Setor', 'Gestor', 'Admissão', 'Período', 'Vencimento', 'Devolver até', 'Situação', 'Enviado ao gestor', 'Respondida em',
     'No prazo', 'Dias do gestor', 'Classificação', 'Decisão', 'Prorrogar (dias)', 'Comentário', 'Assinado por', 'Colaborador de acordo', 'Ciência em', 'Ciência por', 'Alerta', ...cols.map(c => c[0])];
-  const linhas = xp.avaliacoes.map(a => [a.id, a.nome, a.chapa, a.cargo, a.regional || '', a.setor, a.gestor, dataCel(a.admissao), `${a.periodo}º`, dataCel(a.vencimento), dataCel(a.prazo),
+  const linhas = xp.avaliacoes.map(a => [a.id, a.nome, a.chapa, a.cargo, a.regional || '', a.usina || '', a.setor, a.gestor, dataCel(a.admissao), `${a.periodo}º`, dataCel(a.vencimento), dataCel(a.prazo),
     XP_STATUS[a.status][0], dh(a.enviado_em), dh(a.respondido_em), a.respondido_em ? (xpNoPrazo(a) ? 'Sim' : 'Não') : '', xpTempo(a) ?? '',
     a.classificacao || '', a.decisao || '', a.prorrogar_dias || '', a.comentario || '', a.gestor_nome || '', a.respondido_em ? (a.colaborador_de_acordo ? 'Sim' : 'Não registrado') : '', dh(a.ciencia_em), a.ciencia_nome || '', a.alerta ? 'Sim' : 'Não',
     ...cols.map(([, p, f]) => f(a.respostas.find(r => r.id === p.id)))]);
@@ -581,7 +587,7 @@ document.getElementById('xi-exportar').addEventListener('click', () => {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, aba([cab, ...linhas]), 'Avaliações');
   XLSX.utils.book_append_sheet(wb, aba(base), 'Base_indicadores');
-  XLSX.utils.book_append_sheet(wb, aba([['Nome', 'Chapa', 'Cargo', 'Regional', 'Setor', 'Gestor', 'Admissão'], ...xp.pessoas.map(p => [p.nome, p.chapa, p.cargo, p.regional || '', p.setor, p.gestor, dataCel(p.admissao)])]), 'Pessoas');
+  XLSX.utils.book_append_sheet(wb, aba([['Nome', 'Chapa', 'Cargo', 'Regional', 'Usina', 'Setor', 'Gestor', 'Admissão'], ...xp.pessoas.map(p => [p.nome, p.chapa, p.cargo, p.regional || '', p.usina || '', p.setor, p.gestor, dataCel(p.admissao)])]), 'Pessoas');
   XLSX.writeFile(wb, `avaliacoes-experiencia-${xpHojeIso()}.xlsx`);
 });
 

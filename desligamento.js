@@ -3,6 +3,7 @@
 const crypto = require('node:crypto');
 const QRCode = require('qrcode');
 const { db } = require('./db');
+const escopos = require('./escopo');
 
 const CHAVE_FORM = 'entrevista_desligamento';
 const TIPOS = ['unica', 'multipla', 'grade', 'texto', 'curto', 'data', 'nota'];
@@ -50,9 +51,8 @@ db.exec(`
 for (const tabela of ['desligamento_convites', 'desligamento_respostas']) {
   if (!db.prepare(`PRAGMA table_info(${tabela})`).all().some(c => c.name === 'regional')) db.exec(`ALTER TABLE ${tabela} ADD COLUMN regional TEXT`);
 }
-/** Trecho SQL + parâmetros para limitar uma consulta à regional do usuário (escopo nulo = admin, vê tudo). */
-const filtroRegional = (escopo, coluna = 'regional') => (escopo ? { sql: `${coluna} = ?`, params: [escopo] } : { sql: '1 = 1', params: [] });
-const daRegional = (escopo, linha) => !escopo || (linha && linha.regional === escopo);
+// Limita consultas e ações à regional (coordenador) ou às usinas (analista) de quem acessa; admin vê tudo.
+const { filtro: filtroRegional, permite: daRegional, rotulo } = escopos;
 
 /** Formulário inicial, transcrito do PRESI-RH-0002 (Entrevista de Desligamento, revisão 01). */
 function formularioPadrao() {
@@ -278,13 +278,14 @@ function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
       if (lidas.erro) return res.status(400).json({ erro: lidas.erro });
     }
     try {
-      // Regional: a do convite; no link geral, a que veio no link da regional (?r=).
-      const regional = convite ? (convite.regional || '') : texto(req.body?.r, 100);
+      // Regional e usina: as do convite; no link geral, as que vieram no link (?r= e ?u=).
+      const usina = convite ? (convite.usina || '') : texto(req.body?.u, 100);
+      const regional = convite ? (convite.regional || '') : texto(req.body?.r, 100) || escopos.regionalDaUsina(usina);
       db.prepare(`INSERT INTO desligamento_respostas
-        (convite_id, nome, matricula, cargo, area, gestor, data_admissao, data_desligamento, responsavel_rh, recusou, alerta, respostas, regional)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        (convite_id, nome, matricula, cargo, area, gestor, data_admissao, data_desligamento, responsavel_rh, recusou, alerta, respostas, regional, usina)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .run(convite?.id ?? null, ident.nome, ident.matricula, ident.cargo, ident.area, ident.gestor, ident.data_admissao,
-          ident.data_desligamento, convite?.responsavel_rh || '', recusou ? 1 : 0, lidas.alerta ? 1 : 0, JSON.stringify(lidas.respostas), regional);
+          ident.data_desligamento, convite?.responsavel_rh || '', recusou ? 1 : 0, lidas.alerta ? 1 : 0, JSON.stringify(lidas.respostas), regional, usina);
     } catch (e) {
       if (/UNIQUE/.test(e.message)) return res.status(409).json({ erro: 'Esta entrevista já foi registrada. Obrigado!' });
       throw e;
@@ -316,27 +317,29 @@ function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
     const c = {
       ...Object.fromEntries(IDENTIFICACAO.map(k => [k, k.startsWith('data_') ? dataValida(b[k]) : texto(b[k], 200)])),
       telefone: texto(b.telefone, 40), email: texto(b.email, 200), responsavel_rh: texto(b.responsavel_rh, 200),
-      // O coordenador regional cria sempre na própria regional; o admin escolhe.
-      regional: req.escopo || texto(b.regional, 100),
+      regional: texto(b.regional, 100), usina: texto(b.usina, 100),
     };
     if (!c.nome) return res.status(400).json({ erro: 'Informe o nome do colaborador.' });
+    // O coordenador cria sempre na própria regional e o analista em uma das suas usinas; o admin escolhe.
+    const foraDoEscopo = escopos.aplicar(req.escopo, c, req.usuario);
+    if (foraDoEscopo) return res.status(400).json({ erro: foraDoEscopo });
     const token = crypto.randomBytes(9).toString('base64url');
     const r = db.prepare(`INSERT INTO desligamento_convites
-      (token, nome, matricula, cargo, area, gestor, data_admissao, data_desligamento, telefone, email, responsavel_rh, regional)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(token, c.nome, c.matricula, c.cargo, c.area, c.gestor, c.data_admissao, c.data_desligamento, c.telefone, c.email, c.responsavel_rh, c.regional);
+      (token, nome, matricula, cargo, area, gestor, data_admissao, data_desligamento, telefone, email, responsavel_rh, regional, usina)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(token, c.nome, c.matricula, c.cargo, c.area, c.gestor, c.data_admissao, c.data_desligamento, c.telefone, c.email, c.responsavel_rh, c.regional, c.usina);
     res.json({ id: Number(r.lastInsertRowid), token });
   });
 
   app.delete('/api/admin/desligamento/convites/:id', exigirAdmin, (req, res) => {
-    const c = db.prepare('SELECT regional FROM desligamento_convites WHERE id = ?').get(Number(req.params.id));
-    if (!daRegional(req.escopo, c)) return res.status(403).json({ erro: 'Este convite é de outra regional.' });
+    const c = db.prepare('SELECT regional, usina FROM desligamento_convites WHERE id = ?').get(Number(req.params.id));
+    if (!daRegional(req.escopo, c)) return res.status(403).json({ erro: `Este convite é de outra ${rotulo(req.escopo)}.` });
     db.prepare('DELETE FROM desligamento_convites WHERE id = ?').run(Number(req.params.id));
     res.json({ ok: true });
   });
 
   app.get('/api/admin/desligamento/respostas', exigirAdmin, (req, res) => {
-    const f = filtroRegional(req.escopo, 'r.regional');
+    const f = filtroRegional(req.escopo, 'r.');
     const linhas = db.prepare(`
       SELECT r.*, c.telefone, c.email FROM desligamento_respostas r
       LEFT JOIN desligamento_convites c ON c.id = r.convite_id WHERE ${f.sql} ORDER BY r.criado_em DESC, r.id DESC`).all(...f.params)
@@ -345,15 +348,17 @@ function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
   });
 
   app.delete('/api/admin/desligamento/respostas/:id', exigirAdmin, (req, res) => {
-    const r = db.prepare('SELECT regional FROM desligamento_respostas WHERE id = ?').get(Number(req.params.id));
-    if (!daRegional(req.escopo, r)) return res.status(403).json({ erro: 'Esta entrevista é de outra regional.' });
+    const r = db.prepare('SELECT regional, usina FROM desligamento_respostas WHERE id = ?').get(Number(req.params.id));
+    if (!daRegional(req.escopo, r)) return res.status(403).json({ erro: `Esta entrevista é de outra ${rotulo(req.escopo)}.` });
     db.prepare('DELETE FROM desligamento_respostas WHERE id = ?').run(Number(req.params.id));
     res.json({ ok: true });
   });
 
-  // Admin: define a regional de uma resposta que chegou pelo link geral sem regional.
+  // Admin: define a regional (e a usina) de uma resposta que chegou pelo link geral sem elas.
   app.patch('/api/admin/desligamento/respostas/:id', exigirAdmin, exigirMaster, (req, res) => {
-    db.prepare('UPDATE desligamento_respostas SET regional = ? WHERE id = ?').run(texto(req.body?.regional, 100), Number(req.params.id));
+    const atual = db.prepare('SELECT usina FROM desligamento_respostas WHERE id = ?').get(Number(req.params.id));
+    const usina = req.body && 'usina' in req.body ? texto(req.body.usina, 100) : atual?.usina || '';
+    db.prepare('UPDATE desligamento_respostas SET regional = ?, usina = ? WHERE id = ?').run(texto(req.body?.regional, 100), usina, Number(req.params.id));
     res.json({ ok: true });
   });
 
@@ -362,14 +367,17 @@ function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
     let link = `${req.protocol}://${req.get('host')}/desligamento.html`;
     let titulo = 'Link geral';
     if (req.query.c) {
-      const c = db.prepare('SELECT nome, token, regional FROM desligamento_convites WHERE token = ?').get(String(req.query.c));
+      const c = db.prepare('SELECT nome, token, regional, usina FROM desligamento_convites WHERE token = ?').get(String(req.query.c));
       if (!c || !daRegional(req.escopo, c)) return res.status(404).json({ erro: 'Convite não encontrado' });
       link += `?c=${c.token}`;
       titulo = c.nome;
     } else {
-      // Link geral da regional: as respostas chegam já marcadas com a regional.
-      const r = req.escopo || texto(req.query.r, 100);
-      if (r) { link += `?r=${encodeURIComponent(r)}`; titulo = `Link geral · ${r}`; }
+      // Link geral da regional ou da usina: as respostas chegam já marcadas com elas.
+      const alvo = { regional: texto(req.query.r, 100), usina: texto(req.query.u, 100) };
+      const foraDoEscopo = escopos.aplicar(req.escopo, alvo, req.usuario);
+      if (foraDoEscopo) return res.status(400).json({ erro: foraDoEscopo });
+      const params = new URLSearchParams(Object.entries({ r: alvo.regional, u: alvo.usina }).filter(([, v]) => v));
+      if ([...params].length) { link += `?${params}`; titulo = `Link geral · ${alvo.usina || alvo.regional}`; }
     }
     try {
       const opcoes = { margin: 2, width: 600, color: { dark: '#0e3b5c', light: '#ffffff' } };

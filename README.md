@@ -66,6 +66,11 @@ Tudo é editável pelo RH (perguntas, prazos e mensagens) e exporta para Excel.
   - *Coordenador(a) de RH regional*: vê e cadastra somente pessoas, avaliações de experiência e entrevistas de
     desligamento da própria regional (o servidor bloqueia o restante). Não vê formulários, usuários nem backup.
     O "link geral" da entrevista de desligamento dele já marca a regional (`?r=<regional>`).
+  - *Analista de RH (usinas)*: acompanha uma ou mais **usinas** e vê e cadastra somente pessoas, Primeiras Conexões,
+    avaliações de experiência e entrevistas de desligamento dessas usinas (o servidor bloqueia o restante). Não vê
+    formulários, usuários nem backup. O "link geral" da entrevista dele marca a usina (`?u=<usina>`); com mais de
+    uma usina, ele escolhe de qual usina é o link. A usina vem da coluna **USINA** da planilha de admissões (também
+    aceita PLANTA, LOCAL, LOCAL DE TRABALHO, UNIDADE DE TRABALHO ou SITE) ou do campo *Usina / unidade* do cadastro.
 - **Backup**: baixa uma cópia completa do banco (somente administradores).
 
 ## Guia do RH (e-book)

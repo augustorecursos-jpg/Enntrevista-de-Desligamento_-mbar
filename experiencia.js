@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const QRCode = require('qrcode');
 const { db } = require('./db');
 const { lerFormulario, lerRespostas, texto, dataValida } = require('./desligamento');
+const escopos = require('./escopo');
 
 const CHAVE_FORM = 'avaliacao_experiencia';
 const CLASSIFICACOES = ['Possui ótimas perspectivas para o futuro', 'Tem algumas possibilidades futuras', 'Sem possibilidades futuras'];
@@ -150,7 +151,7 @@ function situacao(a, p1, fimExperiencia, admissaoMinima) {
 function listarAvaliacoes(where = '', params = []) {
   const form = formulario();
   const linhas = db.prepare(`
-    SELECT a.*, p.nome, p.chapa, p.cargo, p.setor, p.regional, p.gestor, p.gestor_telefone, p.gestor_email, p.telefone, p.email, p.admissao
+    SELECT a.*, p.nome, p.chapa, p.cargo, p.setor, p.regional, p.usina, p.gestor, p.gestor_telefone, p.gestor_email, p.telefone, p.email, p.admissao
     FROM exp_avaliacoes a JOIN pessoas p ON p.id = a.pessoa_id ${where} ORDER BY a.vencimento, a.periodo`).all(...params);
   const primeiros = new Map(db.prepare('SELECT pessoa_id, decisao, respondido_em FROM exp_avaliacoes WHERE periodo = 1').all().map(r => [r.pessoa_id, r]));
   const fins = new Map(db.prepare('SELECT pessoa_id, vencimento FROM exp_avaliacoes WHERE periodo = 2').all().map(r => [r.pessoa_id, r.vencimento]));
@@ -182,6 +183,7 @@ function lerPessoa(b) {
     nome: texto(b?.nome, 200), chapa: texto(b?.chapa, 60), cargo: texto(b?.cargo, 200), setor: texto(b?.setor, 200),
     gestor: texto(b?.gestor, 200), gestor_telefone: texto(b?.gestor_telefone, 40), gestor_email: texto(b?.gestor_email, 200),
     telefone: texto(b?.telefone, 40), email: texto(b?.email, 200), admissao: dataValida(b?.admissao), regional: texto(b?.regional, 100),
+    usina: texto(b?.usina, 100),
   };
   if (!p.nome) return { erro: 'Informe o nome do colaborador.' };
   if (!p.admissao) return { erro: `Informe a data de admissão de ${p.nome}.` };
@@ -206,13 +208,13 @@ function publico(a, form) {
   };
 }
 
-/** A pessoa (ou a avaliação, pela pessoa) está na regional de quem acessa? Admin (escopo nulo) vê tudo. */
-const daRegional = (escopo, pessoaId) => !escopo || db.prepare('SELECT regional FROM pessoas WHERE id = ?').get(pessoaId)?.regional === escopo;
-const INSERIR_PESSOA = `INSERT INTO pessoas (nome, chapa, cargo, setor, regional, gestor, gestor_telefone, gestor_email, telefone, email, admissao)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-const ATUALIZAR_PESSOA = `UPDATE pessoas SET nome = ?, chapa = ?, cargo = ?, setor = ?, regional = ?, gestor = ?, gestor_telefone = ?, gestor_email = ?,
+/** A pessoa (ou a avaliação, pela pessoa) está na regional ou nas usinas de quem acessa? Admin (escopo nulo) vê tudo. */
+const daRegional = (escopo, pessoaId) => !escopo || escopos.permite(escopo, db.prepare('SELECT regional, usina FROM pessoas WHERE id = ?').get(pessoaId));
+const INSERIR_PESSOA = `INSERT INTO pessoas (nome, chapa, cargo, setor, regional, usina, gestor, gestor_telefone, gestor_email, telefone, email, admissao)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+const ATUALIZAR_PESSOA = `UPDATE pessoas SET nome = ?, chapa = ?, cargo = ?, setor = ?, regional = ?, usina = ?, gestor = ?, gestor_telefone = ?, gestor_email = ?,
   telefone = ?, email = ?, admissao = ? WHERE id = ?`;
-const camposPessoa = (p) => [p.nome, p.chapa, p.cargo, p.setor, p.regional, p.gestor, p.gestor_telefone, p.gestor_email, p.telefone, p.email, p.admissao];
+const camposPessoa = (p) => [p.nome, p.chapa, p.cargo, p.setor, p.regional, p.usina, p.gestor, p.gestor_telefone, p.gestor_email, p.telefone, p.email, p.admissao];
 
 function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
   const limite = limitadorDeFalhas({ maximo: 40, janelaMin: 15 });
@@ -281,13 +283,16 @@ function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
 
   // ===== RH =====
   app.get('/api/admin/pessoas', exigirAdmin, (req, res) => {
-    res.json(req.escopo ? db.prepare('SELECT * FROM pessoas WHERE regional = ? ORDER BY nome').all(req.escopo) : db.prepare('SELECT * FROM pessoas ORDER BY nome').all());
+    const f = escopos.filtro(req.escopo);
+    res.json(db.prepare(`SELECT * FROM pessoas WHERE ${f.sql} ORDER BY nome`).all(...f.params));
   });
 
   app.post('/api/admin/pessoas', exigirAdmin, (req, res) => {
     const { p, erro } = lerPessoa(req.body);
     if (erro) return res.status(400).json({ erro });
-    if (req.escopo) p.regional = req.escopo; // coordenador cadastra sempre na própria regional
+    // Coordenador cadastra sempre na própria regional; analista, em uma das suas usinas.
+    const foraDoEscopo = escopos.aplicar(req.escopo, p, req.usuario);
+    if (foraDoEscopo) return res.status(400).json({ erro: foraDoEscopo });
     const id = emTransacao(() => {
       const r = db.prepare(INSERIR_PESSOA).run(...camposPessoa(p));
       sincronizarAvaliacoes(Number(r.lastInsertRowid), p.admissao);
@@ -305,11 +310,15 @@ function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
       linhas.forEach((l, i) => {
         const { p, erro } = lerPessoa(l);
         if (erro) return invalidas.push({ linha: i + 2, motivo: erro });
-        if (req.escopo) p.regional = req.escopo;
         const existente = p.chapa
-          ? db.prepare('SELECT id, regional FROM pessoas WHERE chapa = ?').get(p.chapa)
-          : db.prepare("SELECT id, regional FROM pessoas WHERE lower(nome) = lower(?) AND COALESCE(chapa, '') = ''").get(p.nome);
-        if (existente && req.escopo && existente.regional !== req.escopo) return invalidas.push({ linha: i + 2, motivo: `${p.nome} já está cadastrado(a) em outra regional.` });
+          ? db.prepare('SELECT id, regional, usina FROM pessoas WHERE chapa = ?').get(p.chapa)
+          : db.prepare("SELECT id, regional, usina FROM pessoas WHERE lower(nome) = lower(?) AND COALESCE(chapa, '') = ''").get(p.nome);
+        if (existente && !escopos.permite(req.escopo, existente)) {
+          return invalidas.push({ linha: i + 2, motivo: `${p.nome} já está cadastrado(a) em outra ${escopos.rotulo(req.escopo)}.` });
+        }
+        if (existente && !p.usina) p.usina = existente.usina || '';
+        const foraDoEscopo = escopos.aplicar(req.escopo, p, req.usuario);
+        if (foraDoEscopo) return invalidas.push({ linha: i + 2, motivo: `${p.nome}: ${foraDoEscopo}` });
         if (existente) {
           if (!p.regional) p.regional = existente.regional || '';
           db.prepare(ATUALIZAR_PESSOA).run(...camposPessoa(p), existente.id);
@@ -329,8 +338,9 @@ function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
     const id = Number(req.params.id);
     const { p, erro } = lerPessoa(req.body);
     if (erro) return res.status(400).json({ erro });
-    if (!daRegional(req.escopo, id)) return res.status(403).json({ erro: 'Esta pessoa é de outra regional.' });
-    if (req.escopo) p.regional = req.escopo;
+    if (!daRegional(req.escopo, id)) return res.status(403).json({ erro: `Esta pessoa é de outra ${escopos.rotulo(req.escopo)}.` });
+    const foraDoEscopo = escopos.aplicar(req.escopo, p, req.usuario);
+    if (foraDoEscopo) return res.status(400).json({ erro: foraDoEscopo });
     emTransacao(() => {
       db.prepare(ATUALIZAR_PESSOA).run(...camposPessoa(p), id);
       sincronizarAvaliacoes(id, p.admissao);
@@ -339,12 +349,15 @@ function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
   });
 
   app.delete('/api/admin/pessoas/:id', exigirAdmin, (req, res) => {
-    if (!daRegional(req.escopo, Number(req.params.id))) return res.status(403).json({ erro: 'Esta pessoa é de outra regional.' });
+    if (!daRegional(req.escopo, Number(req.params.id))) return res.status(403).json({ erro: `Esta pessoa é de outra ${escopos.rotulo(req.escopo)}.` });
     db.prepare('DELETE FROM pessoas WHERE id = ?').run(Number(req.params.id));
     res.json({ ok: true });
   });
 
-  app.get('/api/admin/experiencia/avaliacoes', exigirAdmin, (req, res) => res.json(req.escopo ? listarAvaliacoes('WHERE p.regional = ?', [req.escopo]) : listarAvaliacoes()));
+  app.get('/api/admin/experiencia/avaliacoes', exigirAdmin, (req, res) => {
+    const f = escopos.filtro(req.escopo, 'p.');
+    res.json(listarAvaliacoes(`WHERE ${f.sql}`, f.params));
+  });
 
   /** Ações do acompanhamento: marcar como enviada, ajustar vencimento, registrar ciência pelo RH ou reabrir. */
   app.patch('/api/admin/experiencia/avaliacoes/:id', exigirAdmin, (req, res) => {

@@ -4,7 +4,7 @@ const fmtPct = (n) => (n == null ? '–' : `${fmt(n, Number.isInteger(n) ? 0 : 1
 const num = (n, casas = 2) => String(Math.round(n * 10 ** casas) / 10 ** casas).replace('.', ',');
 
 // ---------- Sessão ----------
-// Quem está usando: { nome, email, papel: 'admin' | 'regional', regional, master, trocar_senha, regionais }
+// Quem está usando: { nome, email, papel: 'admin' | 'regional' | 'analista', regional, usinas, master, trocar_senha, regionais }
 let jaUsuario = null;
 const ehAdmin = () => jaUsuario?.papel === 'admin';
 
@@ -15,14 +15,16 @@ async function iniciar() {
   } catch { /* fica na tela de login */ }
 }
 
-/** Ajusta a tela ao perfil: coordenador regional não vê formulários, usuários nem backup. */
+/** Ajusta a tela ao perfil: coordenador regional e analista de RH não veem formulários, usuários nem backup. */
 function aplicarPerfil() {
   document.body.classList.toggle('papel-regional', !ehAdmin());
   document.getElementById('lista-regionais').innerHTML = (jaUsuario.regionais || []).map(r => `<option value="${esc(r)}">`).join('');
+  document.getElementById('lista-usinas').innerHTML = (jaUsuario.usinas || []).map(u => `<option value="${esc(u)}">`).join('');
   const iniciais = jaUsuario.nome.split(/\s+/).filter(Boolean).map((p, i, a) => (i === 0 || i === a.length - 1 ? p[0] : '')).join('').toUpperCase();
   document.getElementById('ja-eu-av').textContent = iniciais || 'RH';
   document.getElementById('ja-eu-nome').textContent = jaUsuario.nome;
-  document.getElementById('ja-eu-papel').textContent = jaUsuario.master ? 'Admin master' : ehAdmin() ? 'Administrador(a)' : `RH · ${jaUsuario.regional}`;
+  document.getElementById('ja-eu-papel').textContent = jaUsuario.master ? 'Admin master' : ehAdmin() ? 'Administrador(a)'
+    : jaUsuario.papel === 'analista' ? `Analista de RH · ${jaUsuario.usinas.length === 1 ? jaUsuario.usinas[0] : `${jaUsuario.usinas.length} usinas`}` : `RH · ${jaUsuario.regional}`;
 }
 
 async function mostrarPainel() {

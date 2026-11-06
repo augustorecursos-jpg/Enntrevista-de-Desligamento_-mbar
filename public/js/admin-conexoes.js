@@ -120,13 +120,15 @@ const pcUnicos = (campo) => [...new Set(pcx.convites.map(c => c[campo]).filter(B
 
 function renderPcKanban() {
   xpPreencher('pk-regional', pcUnicos('regional'), 'Todas as regionais');
+  xpPreencher('pk-usina', pcUnicos('usina'), 'Todas as usinas');
   xpPreencher('pk-setor', pcUnicos('setor'), 'Todos os setores');
   const regional = document.getElementById('pk-regional').value;
+  const usina = document.getElementById('pk-usina').value;
   const setor = document.getElementById('pk-setor').value;
   const busca = dslNorm(document.getElementById('pk-busca').value);
   const dispensados = document.getElementById('pk-dispensados').checked;
-  const lista = pcx.convites.filter(c => (!regional || c.regional === regional) && (!setor || c.setor === setor)
-    && (!busca || dslNorm([c.nome, c.chapa, c.cargo, c.setor, c.gestor].join(' ')).includes(busca)));
+  const lista = pcx.convites.filter(c => (!regional || c.regional === regional) && (!usina || c.usina === usina) && (!setor || c.setor === setor)
+    && (!busca || dslNorm([c.nome, c.chapa, c.cargo, c.setor, c.usina, c.gestor].join(' ')).includes(busca)));
   document.getElementById('pk-regra').textContent = `O link fica pronto no ${pcx.form.dia_inicio}º dia de casa e o prazo é o ${pcx.form.dia_prazo}º dia. `
     + (pcx.form.admissao_minima ? `Só entram admitidos a partir de ${xpData(pcx.form.admissao_minima)}. ` : '')
     + 'Pessoas admitidas há mais de 45 dias quando foram cadastradas entram como dispensadas (marque “Mostrar dispensados” para reativar).';
@@ -141,7 +143,7 @@ function renderPcKanban() {
     </section>`;
   }).join('');
 }
-['pk-regional', 'pk-setor', 'pk-dispensados'].forEach(id => document.getElementById(id).addEventListener('change', renderPcKanban));
+['pk-regional', 'pk-usina', 'pk-setor', 'pk-dispensados'].forEach(id => document.getElementById(id).addEventListener('change', renderPcKanban));
 document.getElementById('pk-busca').addEventListener('input', renderPcKanban);
 
 function pcCartao(c) {
@@ -225,7 +227,7 @@ function pcAbrirRespostas(id) {
   pcAberto = c;
   document.getElementById('pc-modal-titulo').textContent = c.nome;
   document.getElementById('pc-modal-corpo').innerHTML = `
-    <div class="det-ident">${[['Cargo', c.cargo], ['Setor', c.setor], ['Regional', c.regional], ['Gestor', c.gestor], ['Admissão', xpData(c.admissao)],
+    <div class="det-ident">${[['Cargo', c.cargo], ['Setor', c.setor], ['Regional', c.regional], ['Usina', c.usina], ['Gestor', c.gestor], ['Admissão', xpData(c.admissao)],
       ['Respondida em', `${xpDataHora(c.respondido_em)} (dia ${Math.round((new Date(c.respondido_em.replace(' ', 'T') + 'Z') - new Date(`${c.admissao}T03:00:00Z`)) / 864e5) + 1} de casa)`]]
       .map(([k, v]) => `<div><small>${k}</small><span>${esc(v || '–')}</span></div>`).join('')}</div>
     ${c.alerta ? '<p class="kb-flag" style="margin:0 0 1rem">⚠️ Há discordâncias ou nota baixa: vale um retorno do RH.</p>' : ''}
@@ -252,11 +254,12 @@ document.getElementById('pc-imprimir').addEventListener('click', () => {
 // ---------- Indicadores ----------
 function pcFiltradas() {
   const regional = document.getElementById('pi-regional').value;
+  const usina = document.getElementById('pi-usina').value;
   const setor = document.getElementById('pi-setor').value;
   const gestor = document.getElementById('pi-gestor').value;
   const de = document.getElementById('pi-de').value;
   const ate = document.getElementById('pi-ate').value;
-  return pcx.convites.filter(c => c.status !== 'dispensada' && (!regional || c.regional === regional) && (!setor || c.setor === setor)
+  return pcx.convites.filter(c => c.status !== 'dispensada' && (!regional || c.regional === regional) && (!usina || c.usina === usina) && (!setor || c.setor === setor)
     && (!gestor || c.gestor === gestor) && (!de || c.admissao >= de) && (!ate || c.admissao <= ate));
 }
 
@@ -285,6 +288,7 @@ function pcMotivos(c) {
 
 function renderPcIndicadores() {
   xpPreencher('pi-regional', pcUnicos('regional'), 'Todas as regionais');
+  xpPreencher('pi-usina', pcUnicos('usina'), 'Todas as usinas');
   xpPreencher('pi-setor', pcUnicos('setor'), 'Todos os setores');
   xpPreencher('pi-gestor', pcUnicos('gestor'), 'Todos os gestores');
   const todas = pcFiltradas();
@@ -362,7 +366,7 @@ function renderPcIndicadores() {
 }
 // Escala de referência para somar respostas de várias afirmações (todas usam a mesma escala de concordância).
 const CONCORD_PADRAO = () => pcPerguntas().find(p => p.tipo === 'grade')?.opcoes || [];
-['pi-regional', 'pi-setor', 'pi-gestor', 'pi-de', 'pi-ate'].forEach(id => document.getElementById(id).addEventListener('change', renderPcIndicadores));
+['pi-regional', 'pi-usina', 'pi-setor', 'pi-gestor', 'pi-de', 'pi-ate'].forEach(id => document.getElementById(id).addEventListener('change', renderPcIndicadores));
 
 document.getElementById('pi-exportar').addEventListener('click', () => {
   const perguntas = pcPerguntas();
@@ -374,23 +378,23 @@ document.getElementById('pi-exportar').addEventListener('click', () => {
     else cols.push([`${pcCurto(p.secao)} · ${p.texto}`, (c) => { const v = pcResposta(c, p.id)?.valor; return Array.isArray(v) ? v.join('; ') : v ?? ''; }]);
   }
   const lista = pcx.convites;
-  const cab = ['ID', 'Nome', 'Chapa', 'Cargo', 'Regional', 'Setor', 'Gestor', 'Admissão', 'Enviar a partir de', 'Responder até', 'Situação', 'Enviado em', 'Aberto em',
+  const cab = ['ID', 'Nome', 'Chapa', 'Cargo', 'Regional', 'Usina', 'Setor', 'Gestor', 'Admissão', 'Enviar a partir de', 'Responder até', 'Situação', 'Enviado em', 'Aberto em',
     'Respondida em', 'No prazo', 'Índice de acolhimento (%)', 'Para agir', 'Motivos', ...cols.map(c => c[0])];
   const linhas = lista.map(c => {
     const grades = perguntas.filter(p => p.tipo === 'grade');
     const t = pcContar(grades.flatMap(p => Object.values(pcResposta(c, p.id)?.valor || {})), CONCORD_PADRAO());
     const motivos = c.respondido_em ? pcMotivos(c) : [];
-    return [c.id, c.nome, c.chapa, c.cargo, c.regional || '', c.setor, c.gestor, dataCel(c.admissao), dataCel(c.disponivel), dataCel(c.prazo), PC_STATUS[c.status][0],
+    return [c.id, c.nome, c.chapa, c.cargo, c.regional || '', c.usina || '', c.setor, c.gestor, dataCel(c.admissao), dataCel(c.disponivel), dataCel(c.prazo), PC_STATUS[c.status][0],
       dh(c.enviado_em), dh(c.aberto_em), dh(c.respondido_em), c.respondido_em ? (c.respondido_em.slice(0, 10) <= c.prazo ? 'Sim' : 'Não') : '',
       t.n ? xpPct(t.positiva, t.n) : '', c.respondido_em ? (motivos.length ? 'Sim' : 'Não') : '', motivos.map(m => `${m.secao}: ${m.texto}`).join(' | '),
       ...cols.map(([, f]) => (c.respondido_em ? f(c) : ''))];
   });
-  const base = [['ID', 'Nome', 'Regional', 'Setor', 'Gestor', 'Admissão', 'Conexão', 'Afirmação / pergunta', 'Resposta', 'Positiva (1/0)', 'Negativa (1/0)', 'Nota']];
+  const base = [['ID', 'Nome', 'Regional', 'Usina', 'Setor', 'Gestor', 'Admissão', 'Conexão', 'Afirmação / pergunta', 'Resposta', 'Positiva (1/0)', 'Negativa (1/0)', 'Nota']];
   for (const c of lista.filter(x => x.respondido_em)) {
     for (const p of perguntas) {
       const r = pcResposta(c, p.id);
       if (!r) continue;
-      const linha = (item, v) => [c.id, c.nome, c.regional || '', c.setor, c.gestor, dataCel(c.admissao), pcCurto(p.secao), item, v];
+      const linha = (item, v) => [c.id, c.nome, c.regional || '', c.usina || '', c.setor, c.gestor, dataCel(c.admissao), pcCurto(p.secao), item, v];
       if (p.tipo === 'grade') Object.entries(r.valor).forEach(([it, v]) => base.push([...linha(it, v), pcClasse(p.opcoes, v) === 'positiva' ? 1 : 0, pcClasse(p.opcoes, v) === 'negativa' ? 1 : 0, '']));
       else if (p.tipo === 'nota') base.push([...linha(p.texto, r.valor), '', '', r.valor]);
     }

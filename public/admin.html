@@ -165,7 +165,7 @@
           </div>
         </div>
         <div class="cartao">
-          <h3>📥 Importar planilha de admissões <small>· Excel ou CSV com NOME, CHAPA, CARGO, SETOR, REGIONAL, GESTOR, ADMISSAO (e, se quiser, TELEFONE GESTOR, EMAIL GESTOR, TELEFONE, EMAIL). Para coordenadores, a regional é preenchida automaticamente</small></h3>
+          <h3>📥 Importar planilha de admissões <small>· Excel ou CSV com NOME, CHAPA, CARGO, SETOR, REGIONAL, USINA, GESTOR, ADMISSAO (e, se quiser, TELEFONE GESTOR, EMAIL GESTOR, TELEFONE, EMAIL). Para coordenadores, a regional é preenchida automaticamente; analistas só importam pessoas das próprias usinas</small></h3>
           <div class="importar">
             <input type="file" id="pes-arquivo" accept=".xlsx,.xls,.csv" class="campo">
             <button class="btn btn-laranja" id="pes-importar" disabled>Importar</button>
@@ -188,6 +188,7 @@
           <h1 class="titulo-pagina">Primeiras <em>Conexões</em></h1>
           <div class="filtros">
             <select class="campo" id="pk-regional" aria-label="Regional" data-so-admin><option value="">Todas as regionais</option></select>
+            <select class="campo" id="pk-usina" aria-label="Usina" data-ocultar-vazio><option value="">Todas as usinas</option></select>
             <select class="campo" id="pk-setor" aria-label="Setor"><option value="">Todos os setores</option></select>
             <input class="campo" id="pk-busca" placeholder="Buscar…" aria-label="Buscar">
             <label class="check"><input type="checkbox" id="pk-dispensados"> Mostrar dispensados</label>
@@ -203,6 +204,7 @@
           <h1 class="titulo-pagina">Indicadores das <em>Primeiras Conexões</em></h1>
           <div class="filtros">
             <select class="campo" id="pi-regional" aria-label="Regional" data-so-admin><option value="">Todas as regionais</option></select>
+            <select class="campo" id="pi-usina" aria-label="Usina" data-ocultar-vazio><option value="">Todas as usinas</option></select>
             <select class="campo" id="pi-setor" aria-label="Setor"><option value="">Todos os setores</option></select>
             <select class="campo" id="pi-gestor" aria-label="Gestor"><option value="">Todos os gestores</option></select>
             <label class="filtro-data">Admissão de <input class="campo" type="date" id="pi-de"></label>
@@ -272,6 +274,7 @@
           <h1 class="titulo-pagina">Avaliação de <em>experiência</em></h1>
           <div class="filtros">
             <select class="campo" id="kb-regional" aria-label="Regional" data-so-admin><option value="">Todas as regionais</option></select>
+            <select class="campo" id="kb-usina" aria-label="Usina" data-ocultar-vazio><option value="">Todas as usinas</option></select>
             <select class="campo" id="kb-periodo" aria-label="Período"><option value="">Todos os períodos</option><option value="1">1º período</option><option value="2">2º período</option></select>
             <select class="campo" id="kb-setor" aria-label="Setor"><option value="">Todos os setores</option></select>
             <select class="campo" id="kb-gestor" aria-label="Gestor"><option value="">Todos os gestores</option></select>
@@ -287,6 +290,7 @@
           <h1 class="titulo-pagina">Indicadores da <em>experiência</em></h1>
           <div class="filtros">
             <select class="campo" id="xi-regional" aria-label="Regional" data-so-admin><option value="">Todas as regionais</option></select>
+            <select class="campo" id="xi-usina" aria-label="Usina" data-ocultar-vazio><option value="">Todas as usinas</option></select>
             <select class="campo" id="xi-periodo" aria-label="Período"><option value="">Todos os períodos</option><option value="1">1º período</option><option value="2">2º período</option></select>
             <select class="campo" id="xi-setor" aria-label="Setor"><option value="">Todos os setores</option></select>
             <select class="campo" id="xi-gestor" aria-label="Gestor"><option value="">Todos os gestores</option></select>
@@ -350,13 +354,18 @@
         <div class="us-grade">
           <form class="cartao us-form" id="us-form">
             <h3 id="us-form-tit">➕ Novo acesso</h3>
-            <p class="q-dica">Coordenadores de RH regionais enxergam somente as pessoas, avaliações de experiência e entrevistas de desligamento da própria regional. Administradores enxergam tudo e cuidam dos formulários e dos acessos.</p>
+            <p class="q-dica">Coordenadores de RH regionais enxergam somente as pessoas, avaliações e entrevistas da própria regional. Analistas de RH enxergam somente as das usinas que acompanham. Administradores enxergam tudo e cuidam dos formulários e dos acessos.</p>
             <div class="dsl-campos">
               <label class="largo">Nome *<input class="campo" name="nome" required maxlength="200"></label>
               <label class="largo">E-mail (login) *<input class="campo" name="email" type="email" required maxlength="200"></label>
               <label>Perfil
-                <select class="campo" name="papel"><option value="regional">Coordenador(a) de RH regional</option><option value="admin">Administrador(a)</option></select></label>
-              <label data-us-regional>Regional *<input class="campo" name="regional" maxlength="100" list="lista-regionais" placeholder="Ex.: Centro-Oeste"></label>
+                <select class="campo" name="papel"><option value="regional">Coordenador(a) de RH regional</option><option value="analista">Analista de RH (usinas)</option><option value="admin">Administrador(a)</option></select></label>
+              <label data-us-regional><span data-us-regional-rotulo>Regional *</span><input class="campo" name="regional" maxlength="100" list="lista-regionais" placeholder="Ex.: Centro-Oeste"></label>
+              <div class="largo us-usinas" data-us-usinas hidden>
+                <span>Usinas que acompanha * <small>· escolha nas já cadastradas ou digite uma nova e tecle Enter</small></span>
+                <div class="us-chips" id="us-chips"></div>
+                <input class="campo" id="us-usina-nova" list="lista-usinas" maxlength="100" placeholder="Ex.: UTE Cuiabá">
+              </div>
             </div>
             <div class="linha-form">
               <button class="btn btn-laranja" type="submit" id="us-salvar">Criar acesso</button>
@@ -387,6 +396,7 @@
           <div class="cartao">
             <h3>🔗 Link geral <small>· o colaborador preenche os próprios dados (bom para cartazes, QR Code impresso ou envio em grupo)</small></h3>
             <div class="linha-form compartilhar">
+              <select class="campo" id="dsl-link-usina" aria-label="Usina do link geral" style="max-width:220px" hidden></select>
               <input class="campo" id="dsl-link-geral" readonly aria-label="Link geral da entrevista">
               <button type="button" class="btn btn-claro btn-sm" data-copiar-geral>📋 Copiar</button>
               <a class="btn btn-whats btn-sm" id="dsl-whats-geral" target="_blank" rel="noopener">WhatsApp</a>
@@ -410,6 +420,7 @@
               <label>E-mail pessoal<input class="campo" name="email" type="email" maxlength="200"></label>
               <label>Responsável RH pela entrevista<input class="campo" name="responsavel_rh" maxlength="200"></label>
               <label data-so-admin>Regional<input class="campo" name="regional" maxlength="100" list="lista-regionais" placeholder="Ex.: Centro-Oeste"></label>
+              <label>Usina / unidade<input class="campo" name="usina" maxlength="100" list="lista-usinas" placeholder="Ex.: UTE Cuiabá"></label>
             </div>
             <datalist id="dsl-lista-cargos"></datalist><datalist id="dsl-lista-areas"></datalist><datalist id="dsl-lista-gestores"></datalist>
             <div class="linha-form"><button class="btn btn-laranja" type="submit">Gerar link individual</button></div>
@@ -502,7 +513,7 @@
     </main>
   </div>
 
-  <datalist id="lista-regionais"></datalist>
+  <datalist id="lista-regionais"></datalist><datalist id="lista-usinas"></datalist>
 
   <!-- Minha conta -->
   <dialog class="modal modal-prova" id="modal-conta">
@@ -533,6 +544,7 @@
           <label>Chapa / matrícula<input class="campo" name="chapa" maxlength="60"></label>
           <label>Data de admissão *<input class="campo" name="admissao" type="date" required></label>
           <label data-so-admin>Regional<input class="campo" name="regional" maxlength="100" list="lista-regionais" placeholder="Ex.: Centro-Oeste"></label>
+          <label>Usina / unidade<input class="campo" name="usina" maxlength="100" list="lista-usinas" placeholder="Ex.: UTE Cuiabá"></label>
           <label>Cargo<input class="campo" name="cargo" maxlength="200" list="lista-cargos"></label>
           <label>Setor<input class="campo" name="setor" maxlength="200" list="lista-setores"></label>
           <label>WhatsApp do colaborador<input class="campo" name="telefone" inputmode="tel" maxlength="40"></label>

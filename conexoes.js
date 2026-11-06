@@ -3,6 +3,7 @@
 const QRCode = require('qrcode');
 const { db } = require('./db');
 const { lerFormulario, lerRespostas, texto, dataValida } = require('./desligamento');
+const escopos = require('./escopo');
 
 const CHAVE_FORM = 'primeiras_conexoes';
 // Escala de concordância, da melhor para a pior (os indicadores usam essa ordem); a página do colaborador mostra ao contrário.
@@ -150,7 +151,7 @@ function listar(where = '', params = []) {
   garantirConvites();
   const form = formulario();
   return db.prepare(`
-    SELECT c.*, p.nome, p.chapa, p.cargo, p.setor, p.regional, p.gestor, p.telefone, p.email, p.admissao
+    SELECT c.*, p.nome, p.chapa, p.cargo, p.setor, p.regional, p.usina, p.gestor, p.telefone, p.email, p.admissao
     FROM pc_convites c JOIN pessoas p ON p.id = c.pessoa_id ${where} ORDER BY p.admissao, p.nome`).all(...params)
     .map(c => {
       const linha = {
@@ -183,7 +184,7 @@ function temAlerta(form, respostas) {
 
 function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
   const limite = limitadorDeFalhas({ maximo: 40, janelaMin: 15 });
-  const daRegional = (escopo, c) => !escopo || c?.regional === escopo;
+  const daRegional = (escopo, c) => escopos.permite(escopo, c);
   const publico = (form) => ({
     titulo: form.titulo, introducao: form.introducao, chamada: form.chamada, abertura: form.abertura, assinatura: form.assinatura, ativa: form.ativa, dia_prazo: form.dia_prazo,
     // O objetivo de cada conexão é para o RH: não vai para o colaborador.
@@ -220,7 +221,10 @@ function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
   });
 
   // ===== RH =====
-  app.get('/api/admin/conexoes', exigirAdmin, (req, res) => res.json(req.escopo ? listar('WHERE p.regional = ?', [req.escopo]) : listar()));
+  app.get('/api/admin/conexoes', exigirAdmin, (req, res) => {
+    const f = escopos.filtro(req.escopo, 'p.');
+    res.json(listar(`WHERE ${f.sql}`, f.params));
+  });
 
   /** Ações do acompanhamento: marcar como enviada, dispensar, reativar ou reabrir para nova resposta. */
   app.patch('/api/admin/conexoes/:id', exigirAdmin, (req, res) => {

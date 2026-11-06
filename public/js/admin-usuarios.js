@@ -1,7 +1,8 @@
 // Área do RH · Jornada Âmbar: usuários e acessos (somente admin) e "Minha conta" (troca de senha).
 // Usa em tempo de execução: jaUsuario/ehAdmin (admin.js), xp (admin-experiencia.js), dsl e dslWhats/dslCopiar (admin-desligamento.js).
-const us = { lista: [], editando: null };
-const usPapel = (u) => (u.papel === 'admin' ? 'Administrador(a)' : 'Coordenador(a) de RH regional');
+const us = { lista: [], editando: null, usinas: [] };
+const usPapel = (u) => (u.papel === 'admin' ? 'Administrador(a)' : u.papel === 'analista' ? 'Analista de RH' : 'Coordenador(a) de RH regional');
+const US_SELO = { admin: ['st-gestor', '👑 Admin'], regional: ['st-pendente', '🗺️ Regional'], analista: ['st-ok', '⚡ Analista'] };
 
 // ---------- Minha conta ----------
 function abrirConta(primeiroAcesso = false) {
@@ -12,7 +13,8 @@ function abrirConta(primeiroAcesso = false) {
   const master = jaUsuario.master;
   document.getElementById('conta-info').innerHTML = master
     ? 'Você entrou como <strong>admin master</strong>. Essa senha é definida na hospedagem (variável ADMIN_PASSWORD no Render) e não pode ser trocada por aqui.'
-    : `Login: <strong>${esc(jaUsuario.email)}</strong> · ${esc(usPapel(jaUsuario))}${jaUsuario.regional ? ` · Regional <strong>${esc(jaUsuario.regional)}</strong>` : ''}`;
+    : `Login: <strong>${esc(jaUsuario.email)}</strong> · ${esc(usPapel(jaUsuario))}${jaUsuario.regional ? ` · Regional <strong>${esc(jaUsuario.regional)}</strong>` : ''}`
+      + (jaUsuario.usinas?.length ? ` · Usinas <strong>${esc(jaUsuario.usinas.join(', '))}</strong>` : '');
   document.getElementById('conta-campos').hidden = master;
   document.getElementById('conta-salvar').hidden = master;
   document.getElementById('modal-conta').showModal();
@@ -35,16 +37,17 @@ document.getElementById('form-conta').addEventListener('submit', async (e) => {
 async function renderUsuarios() {
   us.lista = await api('/api/admin/usuarios');
   const busca = dslNorm(document.getElementById('us-busca').value);
-  const lista = us.lista.filter(u => !busca || dslNorm([u.nome, u.email, u.regional].join(' ')).includes(busca));
-  document.getElementById('us-qtd').textContent = `· ${us.lista.filter(u => u.ativo).length} ativo(s) · ${us.lista.filter(u => u.papel === 'regional' && u.ativo).length} coordenador(es) regional(is)`;
+  const lista = us.lista.filter(u => !busca || dslNorm([u.nome, u.email, u.regional, ...u.usinas].join(' ')).includes(busca));
+  const ativos = (papel) => us.lista.filter(u => u.papel === papel && u.ativo).length;
+  document.getElementById('us-qtd').textContent = `· ${us.lista.filter(u => u.ativo).length} ativo(s) · ${ativos('regional')} coordenador(es) regional(is) · ${ativos('analista')} analista(s)`;
   const quando = (s) => (s ? new Date(s.replace(' ', 'T') + 'Z').toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca entrou');
   document.getElementById('us-tabela').innerHTML = `
-    <tr><th>Pessoa</th><th>Perfil</th><th>Regional</th><th>Último acesso</th><th>Situação</th><th></th></tr>
+    <tr><th>Pessoa</th><th>Perfil</th><th>Regional / usinas</th><th>Último acesso</th><th>Situação</th><th></th></tr>
     ${lista.map(u => `<tr class="${u.ativo ? '' : 'inativo'}">
       <td><span class="us-av">${esc(u.nome.split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase())}</span>
         <strong>${esc(u.nome)}</strong><small class="sub">${esc(u.email)}</small></td>
-      <td><span class="selo-st ${u.papel === 'admin' ? 'st-gestor' : 'st-pendente'}">${u.papel === 'admin' ? '👑 Admin' : '🗺️ Regional'}</span></td>
-      <td>${esc(u.regional || 'Todas')}</td>
+      <td><span class="selo-st ${(US_SELO[u.papel] || US_SELO.regional)[0]}">${(US_SELO[u.papel] || US_SELO.regional)[1]}</span></td>
+      <td>${u.papel === 'analista' ? `${u.usinas.map(x => `<span class="us-chip">${esc(x)}</span>`).join(' ')}${u.regional ? `<small class="sub">${esc(u.regional)}</small>` : ''}` : esc(u.regional || 'Todas')}</td>
       <td>${quando(u.ultimo_acesso)}</td>
       <td>${!u.ativo ? '<span class="selo-st st-recusa">Desativado</span>' : u.trocar_senha ? '<span class="selo-st st-pendente" title="Ainda usa a senha provisória">1º acesso pendente</span>' : '<span class="selo-st st-ok">Ativo</span>'}</td>
       <td><div class="acoes-envio">
@@ -63,7 +66,8 @@ document.getElementById('us-busca').addEventListener('input', renderUsuarios);
 function renderVisaoRegional() {
   const regs = new Set([...us.lista.map(u => u.regional), ...xp.pessoas.map(p => p.regional), ...dsl.convites.map(c => c.regional)].filter(Boolean));
   const linhas = [...regs].sort().map(r => {
-    const coords = us.lista.filter(u => u.ativo && u.papel === 'regional' && u.regional === r).map(u => u.nome.split(' ')[0]);
+    const coords = us.lista.filter(u => u.ativo && u.papel === 'regional' && u.regional === r).map(u => u.nome.split(' ')[0])
+      .concat(us.lista.filter(u => u.ativo && u.papel === 'analista' && u.regional === r).map(u => `${u.nome.split(' ')[0]} (analista)`));
     const pessoas = xp.pessoas.filter(p => p.regional === r).length;
     const pend = xp.avaliacoes.filter(a => a.regional === r && (a.status === 'a_enviar' || a.status === 'com_gestor')).length;
     const desl = dsl.convites.filter(c => c.regional === r).length;
@@ -78,13 +82,38 @@ function renderVisaoRegional() {
 
 function usPapelMudou() {
   const f = document.getElementById('us-form');
-  f.querySelector('[data-us-regional]').hidden = f.papel.value === 'admin';
+  const papel = f.papel.value;
+  f.querySelector('[data-us-regional]').hidden = papel === 'admin';
+  f.querySelector('[data-us-regional-rotulo]').textContent = papel === 'analista' ? 'Regional (opcional)' : 'Regional *';
+  f.querySelector('[data-us-usinas]').hidden = papel !== 'analista';
+  usRenderUsinas();
 }
+
+// Usinas do analista: chips com as escolhidas; o campo sugere as usinas já cadastradas.
+function usRenderUsinas() {
+  document.getElementById('us-chips').innerHTML = us.usinas.map((u, i) => `<span class="us-chip">${esc(u)}<button type="button" data-us-tirar="${i}" aria-label="Tirar ${esc(u)}">✕</button></span>`).join('')
+    || '<small class="q-dica">Nenhuma usina escolhida ainda.</small>';
+}
+function usAddUsina() {
+  const campo = document.getElementById('us-usina-nova');
+  const v = campo.value.trim();
+  if (v && !us.usinas.some(u => u.toLowerCase() === v.toLowerCase())) us.usinas.push(v);
+  campo.value = '';
+  usRenderUsinas();
+}
+document.getElementById('us-usina-nova').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); usAddUsina(); } });
+// Escolher uma sugestão da lista já adiciona a usina.
+document.getElementById('us-usina-nova').addEventListener('input', (e) => { if ((jaUsuario.usinas || []).includes(e.target.value)) usAddUsina(); });
+document.getElementById('us-chips').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-us-tirar]');
+  if (b) { us.usinas.splice(Number(b.dataset.usTirar), 1); usRenderUsinas(); }
+});
 document.querySelector('#us-form [name="papel"]').addEventListener('change', usPapelMudou);
 
 function usLimparForm() {
   const f = document.getElementById('us-form');
   us.editando = null;
+  us.usinas = [];
   f.reset();
   document.getElementById('us-form-tit').textContent = '➕ Novo acesso';
   document.getElementById('us-salvar').textContent = 'Criar acesso';
@@ -114,7 +143,8 @@ function usMostrarCredencial(u, senha, titulo) {
 
 document.getElementById('us-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const dados = Object.fromEntries(new FormData(e.target));
+  usAddUsina(); // usina digitada e ainda não confirmada com Enter
+  const dados = { ...Object.fromEntries(new FormData(e.target)), usinas: us.usinas };
   try {
     if (us.editando) {
       await api(`/api/admin/usuarios/${us.editando}`, { method: 'PUT', body: dados });
@@ -133,6 +163,7 @@ document.getElementById('us-form').addEventListener('submit', async (e) => {
 async function atualizarRegionais() {
   jaUsuario = await api('/api/admin/sessao');
   document.getElementById('lista-regionais').innerHTML = (jaUsuario.regionais || []).map(r => `<option value="${esc(r)}">`).join('');
+  document.getElementById('lista-usinas').innerHTML = (jaUsuario.usinas || []).map(u => `<option value="${esc(u)}">`).join('');
 }
 
 document.getElementById('us-tabela').addEventListener('click', async (e) => {
@@ -145,6 +176,7 @@ document.getElementById('us-tabela').addEventListener('click', async (e) => {
       const f = document.getElementById('us-form');
       us.editando = id;
       f.nome.value = u.nome; f.email.value = u.email; f.papel.value = u.papel; f.regional.value = u.regional;
+      us.usinas = [...u.usinas];
       document.getElementById('us-form-tit').textContent = `✏️ Editar · ${u.nome}`;
       document.getElementById('us-salvar').textContent = 'Salvar alterações';
       document.getElementById('us-cancelar').hidden = false;
@@ -162,7 +194,7 @@ document.getElementById('us-tabela').addEventListener('click', async (e) => {
       toast(u.ativo ? 'Acesso desativado.' : 'Acesso reativado ✅');
       renderUsuarios();
     } else if (e.target.closest('[data-us-excluir]')) {
-      if (!confirm(`Excluir o acesso de ${u.nome}? Os dados da regional continuam na Jornada.`)) return;
+      if (!confirm(`Excluir o acesso de ${u.nome}? Os dados da regional e das usinas continuam na Jornada.`)) return;
       await api(`/api/admin/usuarios/${id}`, { method: 'DELETE' });
       renderUsuarios();
     }

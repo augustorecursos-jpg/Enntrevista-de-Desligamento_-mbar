@@ -53,22 +53,23 @@ function lerCookies(req) {
 }
 
 const usuarios = require('./usuarios');
+const escopo = require('./escopo');
 
 /**
  * Exige sessão do RH e coloca em req.usuario quem está acessando: o admin master (ADMIN_PASSWORD),
- * um administrador ou um coordenador regional. Usuários cadastrados são relidos a cada pedido, então
- * desativar alguém ou mudar a regional vale na hora.
+ * um administrador, um coordenador regional ou um analista de RH. Usuários cadastrados são relidos a cada pedido,
+ * então desativar alguém ou mudar a regional ou as usinas vale na hora.
  */
 function exigirAdmin(req, res, next) {
   const s = verificar(lerCookies(req).sess_admin);
   if (s?.master) req.usuario = { id: null, nome: 'Administrador', email: 'admin', papel: 'admin', regional: '', master: true };
   else if (s?.uid) {
     const u = usuarios.buscar(s.uid);
-    if (u) req.usuario = { id: u.id, nome: u.nome, email: u.email, papel: u.papel, regional: u.regional || '', trocar_senha: Boolean(u.trocar_senha) };
+    if (u) req.usuario = { id: u.id, nome: u.nome, email: u.email, papel: u.papel, regional: u.regional || '', usinas: u.usinas, trocar_senha: Boolean(u.trocar_senha) };
   }
   if (!req.usuario) return res.status(401).json({ erro: 'Sessão expirada. Entre novamente.' });
-  // Regional que limita o que a pessoa enxerga (null = tudo).
-  req.escopo = req.usuario.papel === 'admin' ? null : req.usuario.regional;
+  // O que limita o que a pessoa enxerga: null = tudo, { regional } ou { usinas }.
+  req.escopo = escopo.escopoDe(req.usuario);
   next();
 }
 
@@ -150,10 +151,19 @@ app.get('/api/admin/sessao', exigirAdmin, (req, res) => {
   const regionais = [...new Set(db.prepare(`
     SELECT regional FROM usuarios UNION SELECT regional FROM pessoas UNION SELECT regional FROM desligamento_convites`).all()
     .map(r => r.regional).filter(Boolean))].sort();
-  res.json({ ...req.usuario, regionais: req.escopo ? [req.escopo] : regionais });
+  // Usinas já usadas (para os campos de usina); o analista vê só as dele, o coordenador as da regional.
+  const f = escopo.filtro(req.escopo);
+  const usinas = [...new Set(db.prepare(`SELECT usina FROM pessoas WHERE ${f.sql} UNION SELECT usina FROM desligamento_convites WHERE ${f.sql}`)
+    .all(...f.params, ...f.params).map(r => r.usina).filter(Boolean))];
+  if (!req.escopo) for (const u of db.prepare("SELECT usinas FROM usuarios WHERE papel = 'analista'").all()) usinas.push(...JSON.parse(u.usinas || '[]'));
+  res.json({
+    ...req.usuario,
+    regionais: req.escopo?.regional ? [req.escopo.regional] : req.escopo ? (req.usuario.regional ? [req.usuario.regional] : []) : regionais,
+    usinas: req.escopo?.usinas ? req.escopo.usinas : [...new Set(usinas)].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+  });
 });
 
-// Usuários: admins e coordenadores de RH regionais.
+// Usuários: admins, coordenadores de RH regionais e analistas de RH.
 usuarios.registrar(app, { exigirAdmin, exigirMaster });
 
 // Entrevista: formulário, convites, respostas e QR Code.
@@ -164,6 +174,9 @@ require('./experiencia').registrar(app, { exigirAdmin, exigirMaster, limitadorDe
 
 // Primeiras Conexões: avaliação dos primeiros 15 dias respondida pelo colaborador.
 require('./conexoes').registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas });
+
+// Usina em pessoas e na entrevista de desligamento (analistas de RH enxergam só as usinas que acompanham).
+escopo.migrar();
 
 // Cópia completa do banco (formulário, convites e respostas).
 app.get('/api/admin/backup', exigirAdmin, exigirMaster, (_req, res) => {

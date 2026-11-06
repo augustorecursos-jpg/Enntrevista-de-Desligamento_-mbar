@@ -219,3 +219,11 @@ body.papel-regional [data-so-admin] { display: none !important; }
 .xp-r.neutra { background: var(--fundo-2); color: var(--texto-suave); }
 .xp-r.negativa { background: #fdeceb; color: var(--vermelho); }
 @media (max-width: 700px) { .kanban.cinco { grid-template-columns: repeat(5, 82vw); } }
+
+/* Analistas de RH: usinas que acompanham */
+.us-usinas { display: grid; gap: .45rem; font-size: .88rem; font-weight: 700; color: var(--texto); }
+.us-usinas small { font-weight: 400; color: var(--texto-suave); }
+.us-chips { display: flex; flex-wrap: wrap; gap: .4rem; min-height: 1.6rem; align-items: center; }
+.us-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .6rem; border-radius: 999px; background: #e6eef5; color: var(--marinho); font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.us-chip button { border: 0; background: none; padding: 0 0 0 .1rem; color: var(--texto-suave); font-size: .75rem; line-height: 1; }
+.us-chip button:hover { color: var(--vermelho); }

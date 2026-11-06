@@ -1,5 +1,5 @@
-// Usuários da área do RH: o admin master (ADMIN_PASSWORD) cria administradores e coordenadores de RH regionais.
-// Coordenadores enxergam somente as pessoas, avaliações e entrevistas da própria regional.
+// Usuários da área do RH: o admin master (ADMIN_PASSWORD) cria administradores, coordenadores de RH regionais e
+// analistas de RH. Coordenadores enxergam somente a própria regional; analistas, somente as usinas que acompanham.
 const crypto = require('node:crypto');
 const { db } = require('./db');
 
@@ -17,8 +17,10 @@ db.exec(`
     criado_em    TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
+// Usinas acompanhadas pelo analista de RH (JSON: ["UTE Cuiabá", ...]).
+if (!db.prepare('PRAGMA table_info(usuarios)').all().some(c => c.name === 'usinas')) db.exec('ALTER TABLE usuarios ADD COLUMN usinas TEXT');
 
-const PAPEIS = ['admin', 'regional'];
+const PAPEIS = ['admin', 'regional', 'analista'];
 const texto = (v, max = 200) => String(v ?? '').trim().slice(0, max);
 
 function hashSenha(senha) {
@@ -49,15 +51,23 @@ function autenticar(email, senha) {
   db.prepare("UPDATE usuarios SET ultimo_acesso = datetime('now') WHERE id = ?").run(u.id);
   return u;
 }
-const buscar = (id) => db.prepare('SELECT * FROM usuarios WHERE id = ? AND ativo = 1').get(id);
-const publico = (u) => ({ id: u.id, nome: u.nome, email: u.email, papel: u.papel, regional: u.regional || '', trocar_senha: Boolean(u.trocar_senha),
+const lerUsinas = (u) => { try { return JSON.parse(u?.usinas || '[]'); } catch { return []; } };
+const buscar = (id) => {
+  const u = db.prepare('SELECT * FROM usuarios WHERE id = ? AND ativo = 1').get(id);
+  return u && { ...u, usinas: lerUsinas(u) };
+};
+const publico = (u) => ({ id: u.id, nome: u.nome, email: u.email, papel: u.papel, regional: u.regional || '', usinas: lerUsinas(u), trocar_senha: Boolean(u.trocar_senha),
   ativo: Boolean(u.ativo), ultimo_acesso: u.ultimo_acesso, criado_em: u.criado_em });
 
 function ler(b, novo) {
-  const u = { nome: texto(b?.nome), email: texto(b?.email).toLowerCase(), papel: PAPEIS.includes(b?.papel) ? b.papel : 'regional', regional: texto(b?.regional, 100) };
+  const lista = Array.isArray(b?.usinas) ? b.usinas : String(b?.usinas ?? '').split(/[,;\n]/);
+  const usinas = [...new Map(lista.map(x => texto(x, 100)).filter(Boolean).map(x => [x.toLowerCase(), x])).values()];
+  const u = { nome: texto(b?.nome), email: texto(b?.email).toLowerCase(), papel: PAPEIS.includes(b?.papel) ? b.papel : 'regional', regional: texto(b?.regional, 100), usinas };
   if (!u.nome) return { erro: 'Informe o nome.' };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(u.email)) return { erro: 'Informe um e-mail válido (é o login do usuário).' };
   if (u.papel === 'regional' && !u.regional) return { erro: 'Informe a regional do coordenador.' };
+  if (u.papel === 'analista' && !u.usinas.length) return { erro: 'Informe ao menos uma usina que o analista acompanha.' };
+  if (u.papel !== 'analista') u.usinas = [];
   if (u.papel === 'admin') u.regional = '';
   if (novo && b?.senha && !senhaValida(b.senha)) return { erro: 'A senha precisa ter pelo menos 8 caracteres.' };
   return { u };
@@ -73,8 +83,8 @@ function registrar(app, { exigirAdmin, exigirMaster }) {
     if (erro) return res.status(400).json({ erro });
     if (db.prepare('SELECT 1 FROM usuarios WHERE email = ?').get(u.email)) return res.status(409).json({ erro: 'Já existe um usuário com esse e-mail.' });
     const senha = req.body?.senha || senhaProvisoria();
-    const r = db.prepare('INSERT INTO usuarios (nome, email, papel, regional, senha_hash, trocar_senha) VALUES (?, ?, ?, ?, ?, 1)')
-      .run(u.nome, u.email, u.papel, u.regional, hashSenha(senha));
+    const r = db.prepare('INSERT INTO usuarios (nome, email, papel, regional, usinas, senha_hash, trocar_senha) VALUES (?, ?, ?, ?, ?, ?, 1)')
+      .run(u.nome, u.email, u.papel, u.regional, JSON.stringify(u.usinas), hashSenha(senha));
     res.json({ id: Number(r.lastInsertRowid), senha });
   });
 
@@ -83,7 +93,7 @@ function registrar(app, { exigirAdmin, exigirMaster }) {
     const { u, erro } = ler(req.body, false);
     if (erro) return res.status(400).json({ erro });
     if (db.prepare('SELECT 1 FROM usuarios WHERE email = ? AND id <> ?').get(u.email, id)) return res.status(409).json({ erro: 'Já existe um usuário com esse e-mail.' });
-    db.prepare('UPDATE usuarios SET nome = ?, email = ?, papel = ?, regional = ? WHERE id = ?').run(u.nome, u.email, u.papel, u.regional, id);
+    db.prepare('UPDATE usuarios SET nome = ?, email = ?, papel = ?, regional = ?, usinas = ? WHERE id = ?').run(u.nome, u.email, u.papel, u.regional, JSON.stringify(u.usinas), id);
     res.json({ ok: true });
   });
 
