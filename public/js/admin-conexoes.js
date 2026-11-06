@@ -126,6 +126,7 @@ function renderPcKanban() {
   const lista = pcx.convites.filter(c => (!regional || c.regional === regional) && (!setor || c.setor === setor)
     && (!busca || dslNorm([c.nome, c.chapa, c.cargo, c.setor, c.gestor].join(' ')).includes(busca)));
   document.getElementById('pk-regra').textContent = `O link fica pronto no ${pcx.form.dia_inicio}º dia de casa e o prazo é o ${pcx.form.dia_prazo}º dia. `
+    + (pcx.form.admissao_minima ? `Só entram admitidos a partir de ${xpData(pcx.form.admissao_minima)}. ` : '')
     + 'Pessoas admitidas há mais de 45 dias quando foram cadastradas entram como dispensadas (marque “Mostrar dispensados” para reativar).';
   const colunas = dispensados ? [...PC_COLUNAS, ['dispensada', 'Dispensados', 'Fora da janela dos 15 dias']] : PC_COLUNAS;
   const kb = document.getElementById('pk-kanban');
@@ -155,6 +156,8 @@ function pcCartao(c) {
     corpo = `<p class="kb-decisao">${ne != null ? `<span class="kb-nota-pc ${ne <= 6 ? 'baixa' : ''}">experiência <strong>${ne}</strong></span>` : ''}
       ${nr != null ? ` · <span class="kb-nota-pc">recomendação <strong>${nr}</strong></span>` : ''}</p>
       <p class="kb-nota">✍ Respondida em ${xpDataHora(c.respondido_em)}</p>`;
+  } else if (c.antes_inicio) {
+    corpo = `<p class="kb-nota">Admitido antes de ${xpData(pcx.form.admissao_minima)}: fora das Primeiras Conexões.</p>`;
   } else {
     corpo = `<button type="button" class="btn btn-claro btn-sm" data-pc-acao="reativar" data-pc-id="${c.id}">↺ Reativar</button>`;
   }
@@ -168,7 +171,7 @@ function pcCartao(c) {
           ${c.respondido_em ? `<button type="button" data-ver-pc="${c.id}">Ver respostas</button>
             <button type="button" data-pc-acao="reabrir" data-pc-id="${c.id}">Reabrir para nova resposta</button>` : ''}
           ${!c.respondido_em && c.status !== 'dispensada' ? `<button type="button" data-pc-acao="dispensar" data-pc-id="${c.id}">Dispensar</button>` : ''}
-          ${c.status === 'dispensada' ? `<button type="button" data-pc-acao="reativar" data-pc-id="${c.id}">Reativar</button>` : ''}
+          ${c.status === 'dispensada' && !c.antes_inicio ? `<button type="button" data-pc-acao="reativar" data-pc-id="${c.id}">Reativar</button>` : ''}
         </div>
       </details>
     </div>
@@ -411,7 +414,7 @@ const pcEditor = criarEditorFormulario(document.getElementById('pf-secoes'), {
 });
 function pcCarregarFormulario(f) {
   const campos = { titulo: f.titulo, chamada: f.chamada, abertura: f.abertura, assinatura: f.assinatura, introducao: f.introducao,
-    'dia-inicio': f.dia_inicio ?? 12, 'dia-prazo': f.dia_prazo ?? 15, assunto: f.assunto, mensagem: f.mensagem };
+    'dia-inicio': f.dia_inicio ?? 12, 'dia-prazo': f.dia_prazo ?? 15, 'admissao-minima': f.admissao_minima, assunto: f.assunto, mensagem: f.mensagem };
   for (const [k, v] of Object.entries(campos)) document.getElementById(`pf-${k}`).value = v ?? '';
   document.getElementById('pf-ativa').checked = f.ativa !== false;
   pcEditor.carregar(f.secoes);
@@ -429,7 +432,7 @@ document.getElementById('pf-form').addEventListener('submit', async (e) => {
   try {
     pcx.form = await api('/api/admin/conexoes/formulario', { method: 'PUT', body: {
       ativa: document.getElementById('pf-ativa').checked, titulo: v('titulo'), chamada: v('chamada'), abertura: v('abertura'), assinatura: v('assinatura'),
-      introducao: v('introducao'), dia_inicio: Number(v('dia-inicio')), dia_prazo: Number(v('dia-prazo')), assunto: v('assunto'), mensagem: v('mensagem'),
+      introducao: v('introducao'), dia_inicio: Number(v('dia-inicio')), dia_prazo: Number(v('dia-prazo')), admissao_minima: v('admissao-minima'), assunto: v('assunto'), mensagem: v('mensagem'),
       secoes: pcEditor.secoes(),
     } });
     await pcCarregar();

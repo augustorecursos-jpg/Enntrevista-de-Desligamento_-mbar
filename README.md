@@ -42,6 +42,9 @@ Tudo é editável pelo RH (perguntas, prazos e mensagens) e exporta para Excel.
     notas, por setor, falas abertas e a lista **Para agir agora** (discordâncias, nota até 6 e pendências de estrutura).
     Exporta Excel (*Primeiras_Conexoes* e *Base_indicadores*).
   - *Formulário*: texto de abertura (integral, editável), conexões, afirmações, perguntas abertas e notas, dias de envio e prazo.
+- **Data de início**: as Primeiras Conexões e a Avaliação de Experiência consideram só os admitidos a partir de
+  **01/11/2026** (campo *Considerar admitidos a partir de* no Formulário de cada uma; vazio = todos). Quem entrou antes
+  fica dispensado / “Fora do período” e não aparece em “A enviar” nem em “Atrasadas”.
 - **Avaliação de Experiência**
   - *Acompanhar*: quadro **A enviar → Com o gestor → Aguardando ciência → Concluídas**, com etiquetas de prazo
     (verde, laranja, vermelho), aviso de que o gestor abriu o link, envio por WhatsApp/e-mail/link/QR Code, ciência

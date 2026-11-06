@@ -11,6 +11,8 @@ const DECISOES = ['Efetivar', 'Prorrogar', 'Rescindir'];
 const ADERENCIA = ['Aderente', 'Não aderente'];
 const CONCEITO = ['Bom', 'Regular', 'Ruim'];
 const SIM_NAO = ['Sim', 'Não'];
+// Só entram no processo os admitidos a partir desta data (editável no formulário; vazio = todos).
+const ADMISSAO_MINIMA = '2026-11-01';
 // Mensagem ao gestor exibida na abertura da avaliação (editável pelo RH). Parágrafos separados por linha em branco.
 const ORIENTACAO = [
   'Gestor, avaliar é mais do que preencher um formulário. É reconhecer potencial, orientar o desenvolvimento e contribuir para a construção de uma trajetória profissional de sucesso.',
@@ -80,6 +82,7 @@ function formularioPadrao() {
     orientacao: ORIENTACAO,
     periodos: [45, 90],
     antecedencia: 10,
+    admissao_minima: ADMISSAO_MINIMA,
     secoes: [
       { titulo: 'Cultura e valores', perguntas: [
         p('valores', 'grade', 'Quanto aos valores e à cultura da empresa, o colaborador pode ser avaliado:', ADERENCIA,
@@ -114,7 +117,7 @@ function formularioPadrao() {
 db.prepare('INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES (?, ?)').run(CHAVE_FORM, JSON.stringify(formularioPadrao()));
 function formulario() {
   const f = JSON.parse(db.prepare('SELECT valor FROM configuracoes WHERE chave = ?').get(CHAVE_FORM).valor);
-  return { ...f, orientacao: f.orientacao ?? ORIENTACAO };
+  return { ...f, orientacao: f.orientacao ?? ORIENTACAO, admissao_minima: f.admissao_minima ?? ADMISSAO_MINIMA };
 }
 
 // ---------- datas ----------
@@ -133,12 +136,13 @@ const hoje = () => new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
  * Situação de cada avaliação, considerando a decisão do 1º período para liberar (ou dispensar) o 2º.
  * Sem resposta e com o período de experiência já encerrado (passou do vencimento do 2º período, já com a
  * prorrogação), a avaliação fica "fora do período": não entra em "a enviar" nem em "atrasadas".
+ * O mesmo vale para quem foi admitido antes da data de início do processo (admissao_minima).
  */
-function situacao(a, p1, fimExperiencia) {
+function situacao(a, p1, fimExperiencia, admissaoMinima) {
   if (a.ciencia_em) return 'concluida';
   if (a.respondido_em) return 'aguardando_ciencia';
   if (a.periodo === 2 && p1 && (p1.decisao === 'Efetivar' || p1.decisao === 'Rescindir')) return 'dispensada';
-  if (fimExperiencia && hoje() > fimExperiencia) return 'encerrada';
+  if ((fimExperiencia && hoje() > fimExperiencia) || (admissaoMinima && a.admissao < admissaoMinima)) return 'encerrada';
   if (a.periodo === 2 && p1 && !p1.respondido_em) return 'aguardando_1';
   return a.enviado_em ? 'com_gestor' : 'a_enviar';
 }
@@ -154,7 +158,7 @@ function listarAvaliacoes(where = '', params = []) {
     ...a,
     respostas: a.respostas ? JSON.parse(a.respostas) : [],
     prazo: somarDias(a.vencimento, -(Number(form.antecedencia) || 0)),
-    status: situacao(a, primeiros.get(a.pessoa_id), fins.get(a.pessoa_id)),
+    status: situacao(a, primeiros.get(a.pessoa_id), fins.get(a.pessoa_id), form.admissao_minima),
   }));
 }
 
@@ -384,6 +388,7 @@ function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
       mensagem_ciencia: texto(b.mensagem_ciencia, 2000) || 'Olá, {nome}! Registre sua ciência da avaliação de experiência: {link}',
       orientacao: texto(b.orientacao, 6000) || ORIENTACAO,
       periodos, antecedencia,
+      admissao_minima: dataValida(b.admissao_minima),
     };
     db.prepare('UPDATE configuracoes SET valor = ? WHERE chave = ?').run(JSON.stringify(novo), CHAVE_FORM);
     // Durações novas valem para as avaliações ainda não respondidas.

@@ -2,12 +2,14 @@
 // Um convite por pessoa cadastrada; o RH envia a partir do 12º dia e acompanha respostas e indicadores.
 const QRCode = require('qrcode');
 const { db } = require('./db');
-const { lerFormulario, lerRespostas, texto } = require('./desligamento');
+const { lerFormulario, lerRespostas, texto, dataValida } = require('./desligamento');
 
 const CHAVE_FORM = 'primeiras_conexoes';
 // Escala de concordância, da melhor para a pior (os indicadores usam essa ordem); a página do colaborador mostra ao contrário.
 const CONCORDANCIA = ['Concordo totalmente', 'Concordo', 'Neutro', 'Discordo', 'Discordo totalmente'];
 const NOTA_ALERTA = 6; // nota da experiência até 6 pede atenção do RH
+// Só entram no processo os admitidos a partir desta data (editável no formulário; vazio = todos).
+const ADMISSAO_MINIMA = '2026-11-01';
 
 const CHAMADA = 'Sua chegada importa. Sua experiência transforma. Sua voz faz a diferença!';
 const ABERTURA = [
@@ -57,6 +59,7 @@ function formularioPadrao() {
     mensagem: 'Olá, {nome}! Seus primeiros dias na Âmbar Energia importam muito para nós. Queremos ouvir você no Primeiras Conexões: leva cerca de 7 minutos e suas respostas são lidas apenas pelo RH.\n\nResponda até {prazo} pelo link: {link}',
     dia_inicio: 12,
     dia_prazo: 15,
+    admissao_minima: ADMISSAO_MINIMA,
     secoes: [
       conexao('Pré-Onboarding', 'Antes da chegada', 'Avaliar a comunicação, a organização e o cuidado antes do primeiro dia de trabalho.', [
         'Recebi, com antecedência, as informações necessárias para o meu primeiro dia de trabalho.',
@@ -112,7 +115,10 @@ function formularioPadrao() {
 }
 
 db.prepare('INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES (?, ?)').run(CHAVE_FORM, JSON.stringify(formularioPadrao()));
-const formulario = () => JSON.parse(db.prepare('SELECT valor FROM configuracoes WHERE chave = ?').get(CHAVE_FORM).valor);
+function formulario() {
+  const f = JSON.parse(db.prepare('SELECT valor FROM configuracoes WHERE chave = ?').get(CHAVE_FORM).valor);
+  return { ...f, admissao_minima: f.admissao_minima ?? ADMISSAO_MINIMA };
+}
 
 // ---------- datas ----------
 const somarDias = (iso, dias) => {
@@ -132,10 +138,10 @@ function garantirConvites() {
     FROM pessoas p WHERE NOT EXISTS (SELECT 1 FROM pc_convites c WHERE c.pessoa_id = p.id)`).run();
 }
 
-/** Situação: em breve (antes do dia de envio) · a enviar · enviada · respondida · dispensada. */
+/** Situação: em breve (antes do dia de envio) · a enviar · enviada · respondida · dispensada (pelo RH ou admitido antes do início do processo). */
 function situacao(c) {
   if (c.respondido_em) return 'respondida';
-  if (c.dispensado_em) return 'dispensada';
+  if (c.dispensado_em || c.antes_inicio) return 'dispensada';
   if (c.enviado_em) return 'enviada';
   return hoje() < c.disponivel ? 'em_breve' : 'a_enviar';
 }
@@ -152,6 +158,7 @@ function listar(where = '', params = []) {
         respostas: c.respostas ? JSON.parse(c.respostas) : [],
         disponivel: somarDias(c.admissao, (Number(form.dia_inicio) || 12) - 1),
         prazo: somarDias(c.admissao, (Number(form.dia_prazo) || 15) - 1),
+        antes_inicio: Boolean(form.admissao_minima && c.admissao < form.admissao_minima),
       };
       return { ...linha, status: situacao(linha) };
     });
@@ -224,8 +231,10 @@ function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
     else if (acao === 'dispensar') {
       if (c.respondido_em) return res.status(400).json({ erro: 'Este colaborador já respondeu.' });
       db.prepare("UPDATE pc_convites SET dispensado_em = datetime('now') WHERE id = ?").run(c.id);
-    } else if (acao === 'reativar') db.prepare('UPDATE pc_convites SET dispensado_em = NULL WHERE id = ?').run(c.id);
-    else if (acao === 'reabrir') db.prepare('UPDATE pc_convites SET respostas = NULL, alerta = 0, respondido_em = NULL WHERE id = ?').run(c.id);
+    } else if (acao === 'reativar') {
+      if (c.antes_inicio) return res.status(400).json({ erro: 'Admitido antes do início das Primeiras Conexões. Ajuste a data no formulário para incluir.' });
+      db.prepare('UPDATE pc_convites SET dispensado_em = NULL WHERE id = ?').run(c.id);
+    } else if (acao === 'reabrir') db.prepare('UPDATE pc_convites SET respostas = NULL, alerta = 0, respondido_em = NULL WHERE id = ?').run(c.id);
     else return res.status(400).json({ erro: 'Ação desconhecida.' });
     res.json({ ok: true });
   });
@@ -250,7 +259,7 @@ function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
       assinatura: texto(b.assinatura, 200),
       assunto: texto(b.assunto, 200) || 'Primeiras Conexões',
       mensagem: texto(b.mensagem, 2000) || 'Olá, {nome}! Responda o Primeiras Conexões pelo link: {link}',
-      dia_inicio: diaInicio, dia_prazo: diaPrazo,
+      dia_inicio: diaInicio, dia_prazo: diaPrazo, admissao_minima: dataValida(b.admissao_minima),
     };
     db.prepare('UPDATE configuracoes SET valor = ? WHERE chave = ?').run(JSON.stringify(novo), CHAVE_FORM);
     res.json(novo);
