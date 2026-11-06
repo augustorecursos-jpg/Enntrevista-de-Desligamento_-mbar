@@ -92,7 +92,9 @@ function renderPcInicio() {
   const c = (s) => pcx.convites.filter(x => x.status === s).length;
   const mes = xpHojeIso().slice(0, 7);
   const alertas = pcx.convites.filter(x => x.alerta).length;
-  document.getElementById('ja-nums-pc').innerHTML = n(c('a_enviar'), 'a enviar', c('a_enviar') ? 'alerta' : '') + n(c('enviada'), 'aguardando resposta')
+  const proximo = pcx.convites.filter(x => x.status === 'em_breve').map(x => x.disponivel).sort()[0];
+  document.getElementById('ja-nums-pc').innerHTML = n(c('em_breve'), proximo ? `em breve · envios a partir de ${xpData(proximo).slice(0, 5)}` : 'em breve')
+    + n(c('a_enviar'), 'a enviar', c('a_enviar') ? 'alerta' : '') + n(c('enviada'), 'aguardando resposta')
     + n(pcx.convites.filter(x => (x.respondido_em || '').slice(0, 7) === mes).length, 'respondidas no mês') + n(alertas, 'para agir', alertas ? 'alerta' : '');
 }
 
