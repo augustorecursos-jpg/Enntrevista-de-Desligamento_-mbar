@@ -603,7 +603,7 @@ function xpCarregarFormulario(f) {
   document.getElementById('xf-p1').value = f.periodos?.[0] ?? 45;
   document.getElementById('xf-p2').value = f.periodos?.[1] ?? 90;
   document.getElementById('xf-antecedencia').value = f.antecedencia ?? 10;
-  document.getElementById('xf-admissao-minima').value = f.admissao_minima || '';
+  document.getElementById('xf-vencimento-minimo').value = f.vencimento_minimo || '';
   document.getElementById('xf-assunto').value = f.assunto || '';
   document.getElementById('xf-mensagem').value = f.mensagem || '';
   document.getElementById('xf-mensagem-ciencia').value = f.mensagem_ciencia || '';
@@ -627,7 +627,7 @@ document.getElementById('xf-form').addEventListener('submit', async (e) => {
       orientacao: document.getElementById('xf-orientacao').value,
       periodos: [Number(document.getElementById('xf-p1').value), Number(document.getElementById('xf-p2').value)],
       antecedencia: Number(document.getElementById('xf-antecedencia').value),
-      admissao_minima: document.getElementById('xf-admissao-minima').value,
+      vencimento_minimo: document.getElementById('xf-vencimento-minimo').value,
       assunto: document.getElementById('xf-assunto').value,
       mensagem: document.getElementById('xf-mensagem').value,
       mensagem_ciencia: document.getElementById('xf-mensagem-ciencia').value,

@@ -42,9 +42,13 @@ Tudo é editável pelo RH (perguntas, prazos e mensagens) e exporta para Excel.
     notas, por setor, falas abertas e a lista **Para agir agora** (discordâncias, nota até 6 e pendências de estrutura).
     Exporta Excel (*Primeiras_Conexoes* e *Base_indicadores*).
   - *Formulário*: texto de abertura (integral, editável), conexões, afirmações, perguntas abertas e notas, dias de envio e prazo.
-- **Data de início**: as Primeiras Conexões e a Avaliação de Experiência consideram só os admitidos a partir de
-  **01/11/2026** (campo *Considerar admitidos a partir de* no Formulário de cada uma; vazio = todos). Quem entrou antes
-  fica dispensado / “Fora do período” e não aparece em “A enviar” nem em “Atrasadas”.
+- **Data de início**:
+  - *Primeiras Conexões*: só os admitidos a partir de **01/11/2026** (campo *Considerar admitidos a partir de*).
+  - *Avaliação de Experiência*: só as avaliações que **vencem** a partir de **01/11/2026** (campo *Considerar
+    avaliações que vencem a partir de*). Assim, quem completa 3 meses em novembro é avaliado no 2º período mesmo
+    admitido antes; se o 1º período venceu antes da data, ele fica “Fora do período” e o 2º é liberado direto.
+  - Cada avaliação de experiência continua liberada (como atrasada) até o **fim do mês em que vence**; depois disso,
+    sem resposta, vira “Fora do período”. Vazio = considera todas.
 - **Avaliação de Experiência**
   - *Acompanhar*: quadro **A enviar → Com o gestor → Aguardando ciência → Concluídas**, com etiquetas de prazo
     (verde, laranja, vermelho), aviso de que o gestor abriu o link, envio por WhatsApp/e-mail/link/QR Code, ciência

@@ -326,7 +326,7 @@
             <label>Duração do 1º período (dias)<input class="campo" id="xf-p1" type="number" min="1" max="180"></label>
             <label>Duração total até o fim do 2º período (dias)<input class="campo" id="xf-p2" type="number" min="1" max="180"></label>
             <label>Devolver com antecedência de (dias)<input class="campo" id="xf-antecedencia" type="number" min="0" max="60"></label>
-            <label>Considerar admitidos a partir de <small>· quem entrou antes fica “Fora do período” (vazio = todos)</small><input class="campo" id="xf-admissao-minima" type="date"></label>
+            <label>Considerar avaliações que vencem a partir de <small>· as que vencem antes ficam “Fora do período” (vazio = todas). Cada avaliação fica liberada até o fim do mês em que vence</small><input class="campo" id="xf-vencimento-minimo" type="date"></label>
             <label class="largo">Assunto do e-mail ao gestor<input class="campo" id="xf-assunto" maxlength="200"></label>
             <label class="largo">Mensagem ao gestor <small>· use {gestor}, {nome}, {periodo}, {vencimento}, {prazo} e {link}</small><textarea class="campo" id="xf-mensagem" rows="3" maxlength="2000"></textarea></label>
             <label class="largo">Mensagem de ciência ao colaborador <small>· use {nome}, {periodo} e {link}</small><textarea class="campo" id="xf-mensagem-ciencia" rows="3" maxlength="2000"></textarea></label>
