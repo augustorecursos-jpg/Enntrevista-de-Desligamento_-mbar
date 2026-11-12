@@ -149,19 +149,25 @@ app.post('/api/admin/sair', (_req, res) => {
 app.get('/api/admin/sessao', exigirAdmin, (req, res) => {
   // Regionais já usadas no sistema (para os campos de regional do admin).
   const regionais = [...new Set(db.prepare(`
-    SELECT regional FROM usuarios UNION SELECT regional FROM pessoas UNION SELECT regional FROM desligamento_convites`).all()
+    SELECT regional FROM usuarios UNION SELECT regional FROM pessoas UNION SELECT regional FROM desligamento_convites
+    UNION SELECT regional FROM filiais`).all()
     .map(r => r.regional).filter(Boolean))].sort();
   // Usinas já usadas (para os campos de usina); o analista vê só as dele, o coordenador as da regional.
   const f = escopo.filtro(req.escopo);
   const usinas = [...new Set(db.prepare(`SELECT usina FROM pessoas WHERE ${f.sql} UNION SELECT usina FROM desligamento_convites WHERE ${f.sql}`)
     .all(...f.params, ...f.params).map(r => r.usina).filter(Boolean))];
   if (!req.escopo) for (const u of db.prepare("SELECT usinas FROM usuarios WHERE papel = 'analista'").all()) usinas.push(...JSON.parse(u.usinas || '[]'));
+  // Cadastro de usinas e filiais (todas para o admin; as da regional para o coordenador).
+  for (const fl of require('./filiais').listar()) if (!req.escopo || fl.regional === req.escopo.regional) usinas.push(fl.nome);
   res.json({
     ...req.usuario,
     regionais: req.escopo?.regional ? [req.escopo.regional] : req.escopo ? (req.usuario.regional ? [req.usuario.regional] : []) : regionais,
     usinas: req.escopo?.usinas ? req.escopo.usinas : [...new Set(usinas)].sort((a, b) => a.localeCompare(b, 'pt-BR')),
   });
 });
+
+// Cadastro de usinas e filiais por regional (lista usada no acesso dos analistas).
+require('./filiais').registrar(app, { exigirAdmin, exigirMaster });
 
 // Usuários: admins, coordenadores de RH regionais e analistas de RH.
 usuarios.registrar(app, { exigirAdmin, exigirMaster });

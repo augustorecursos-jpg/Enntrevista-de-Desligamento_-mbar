@@ -362,9 +362,18 @@
                 <select class="campo" name="papel"><option value="regional">Coordenador(a) de RH regional</option><option value="analista">Analista de RH (usinas)</option><option value="admin">Administrador(a)</option></select></label>
               <label data-us-regional><span data-us-regional-rotulo>Regional *</span><input class="campo" name="regional" maxlength="100" list="lista-regionais" placeholder="Ex.: Centro-Oeste"></label>
               <div class="largo us-usinas" data-us-usinas hidden>
-                <span>Usinas que acompanha * <small>· escolha nas já cadastradas ou digite uma nova e tecle Enter</small></span>
+                <span>Usinas que acompanha * <small>· marque uma ou mais na lista</small></span>
+                <div class="us-multi" id="us-multi">
+                  <button type="button" class="campo us-multi-btn" id="us-multi-btn" aria-haspopup="listbox" aria-expanded="false"><span id="us-multi-rotulo">Escolher usinas…</span><b aria-hidden="true">▾</b></button>
+                  <div class="us-multi-painel" id="us-multi-painel" hidden>
+                    <input class="campo" id="us-multi-busca" placeholder="Buscar usina ou regional…" autocomplete="off">
+                    <div class="us-multi-lista" id="us-multi-lista" role="listbox" aria-multiselectable="true"></div>
+                    <div class="us-multi-rodape"><button type="button" class="btn btn-claro btn-sm" id="us-multi-limpar">Limpar</button>
+                      <button type="button" class="btn btn-marinho btn-sm" id="us-multi-ok">Pronto</button></div>
+                  </div>
+                </div>
                 <div class="us-chips" id="us-chips"></div>
-                <input class="campo" id="us-usina-nova" list="lista-usinas" maxlength="100" placeholder="Ex.: UTE Cuiabá">
+                <input class="campo" id="us-usina-nova" list="lista-usinas" maxlength="100" placeholder="Digite a usina e tecle Enter" hidden>
               </div>
             </div>
             <div class="linha-form">
@@ -377,6 +386,24 @@
             <h3>🗺️ Visão por regional</h3>
             <div class="tabela-wrap"><table class="tabela" id="us-regionais"></table></div>
           </section>
+        </div>
+        <div class="cartao fl-cartao" style="margin-top:1.4rem">
+          <div class="cab-tabela"><h3>🏭 Usinas e filiais por regional <small id="fl-qtd"></small></h3>
+            <input class="campo busca" id="fl-busca" placeholder="Buscar usina ou regional…"></div>
+          <p class="q-dica">É a lista que aparece para escolher as usinas dos analistas de RH (e nos campos de usina). Importe a planilha com as colunas
+            <strong>REGIONAL</strong> e <strong>FILIAL</strong> (ou USINA) — ou uma coluna por regional, com as filiais embaixo. Reimportar atualiza sem duplicar.</p>
+          <div class="importar">
+            <input type="file" id="fl-arquivo" accept=".xlsx,.xls,.csv" class="campo">
+            <button class="btn btn-laranja" id="fl-importar" type="button" disabled>Importar</button>
+            <button class="btn btn-claro" id="fl-modelo" type="button">Baixar modelo</button>
+          </div>
+          <div id="fl-previa" class="q-dica"></div>
+          <form class="linha-form fl-nova" id="fl-form">
+            <input class="campo" name="regional" list="lista-regionais" maxlength="100" placeholder="Regional" required>
+            <input class="campo" name="nome" maxlength="100" placeholder="Nome da usina / filial" required>
+            <button class="btn btn-claro" type="submit">+ Adicionar</button>
+          </form>
+          <div class="tabela-wrap"><table class="tabela" id="fl-tabela"></table></div>
         </div>
         <div class="cartao" style="margin-top:1.4rem">
           <div class="cab-tabela"><h3>🔑 Acessos <small id="us-qtd"></small></h3>

@@ -1,6 +1,6 @@
 // Área do RH · Jornada Âmbar: usuários e acessos (somente admin) e "Minha conta" (troca de senha).
 // Usa em tempo de execução: jaUsuario/ehAdmin (admin.js), xp (admin-experiencia.js), dsl e dslWhats/dslCopiar (admin-desligamento.js).
-const us = { lista: [], editando: null, usinas: [] };
+const us = { lista: [], editando: null, usinas: [], filiais: [] };
 const usPapel = (u) => (u.papel === 'admin' ? 'Administrador(a)' : u.papel === 'analista' ? 'Analista de RH' : 'Coordenador(a) de RH regional');
 const US_SELO = { admin: ['st-gestor', '👑 Admin'], regional: ['st-pendente', '🗺️ Regional'], analista: ['st-ok', '⚡ Analista'] };
 
@@ -35,7 +35,7 @@ document.getElementById('form-conta').addEventListener('submit', async (e) => {
 
 // ---------- Usuários (admin) ----------
 async function renderUsuarios() {
-  us.lista = await api('/api/admin/usuarios');
+  [us.lista, us.filiais] = await Promise.all([api('/api/admin/usuarios'), api('/api/admin/filiais')]);
   const busca = dslNorm(document.getElementById('us-busca').value);
   const lista = us.lista.filter(u => !busca || dslNorm([u.nome, u.email, u.regional, ...u.usinas].join(' ')).includes(busca));
   const ativos = (papel) => us.lista.filter(u => u.papel === papel && u.ativo).length;
@@ -58,16 +58,19 @@ async function renderUsuarios() {
       </div></td>
     </tr>`).join('') || `<tr><td colspan="6">${us.lista.length ? 'Nada encontrado.' : 'Nenhum acesso criado ainda. Comece pelo formulário acima.'}</td></tr>`}`;
   renderVisaoRegional();
+  renderFiliais();
   usPapelMudou();
 }
 document.getElementById('us-busca').addEventListener('input', renderUsuarios);
 
 /** Resumo por regional: quem cuida e quanto há em andamento. */
 function renderVisaoRegional() {
-  const regs = new Set([...us.lista.map(u => u.regional), ...xp.pessoas.map(p => p.regional), ...dsl.convites.map(c => c.regional)].filter(Boolean));
+  const regs = new Set([...us.lista.map(u => u.regional), ...us.filiais.map(f => f.regional), ...xp.pessoas.map(p => p.regional), ...dsl.convites.map(c => c.regional)].filter(Boolean));
   const linhas = [...regs].sort().map(r => {
+    const usinasDaReg = us.filiais.filter(f => f.regional === r).map(f => f.nome.toLowerCase());
     const coords = us.lista.filter(u => u.ativo && u.papel === 'regional' && u.regional === r).map(u => u.nome.split(' ')[0])
-      .concat(us.lista.filter(u => u.ativo && u.papel === 'analista' && u.regional === r).map(u => `${u.nome.split(' ')[0]} (analista)`));
+      .concat(us.lista.filter(u => u.ativo && u.papel === 'analista' && (u.regional === r || u.usinas.some(x => usinasDaReg.includes(x.toLowerCase()))))
+        .map(u => `${u.nome.split(' ')[0]} (analista)`));
     const pessoas = xp.pessoas.filter(p => p.regional === r).length;
     const pend = xp.avaliacoes.filter(a => a.regional === r && (a.status === 'a_enviar' || a.status === 'com_gestor')).length;
     const desl = dsl.convites.filter(c => c.regional === r).length;
@@ -89,25 +92,170 @@ function usPapelMudou() {
   usRenderUsinas();
 }
 
-// Usinas do analista: chips com as escolhidas; o campo sugere as usinas já cadastradas.
+// Usinas do analista: lista suspensa com marcação múltipla, agrupada por regional (cadastro de usinas e filiais).
+// Sem cadastro ainda, vale o campo de texto (digita e tecla Enter).
+const usMesma = (a, b) => a.toLowerCase() === b.toLowerCase();
+const usTem = (nome) => us.usinas.some(u => usMesma(u, nome));
 function usRenderUsinas() {
+  const comLista = us.filiais.length > 0;
+  document.getElementById('us-multi').hidden = !comLista;
+  document.getElementById('us-usina-nova').hidden = comLista;
   document.getElementById('us-chips').innerHTML = us.usinas.map((u, i) => `<span class="us-chip">${esc(u)}<button type="button" data-us-tirar="${i}" aria-label="Tirar ${esc(u)}">✕</button></span>`).join('')
-    || '<small class="q-dica">Nenhuma usina escolhida ainda.</small>';
+    || `<small class="q-dica">${comLista ? 'Nenhuma usina marcada ainda.' : 'Nenhuma usina ainda. Cadastre a lista em “Usinas e filiais por regional”, abaixo, para escolher numa lista.'}</small>`;
+  document.getElementById('us-multi-rotulo').textContent = !us.usinas.length ? 'Escolher usinas…'
+    : us.usinas.length === 1 ? us.usinas[0] : `${us.usinas.length} usinas marcadas`;
+  if (!document.getElementById('us-multi-painel').hidden) usRenderPainel();
 }
+function usRenderPainel() {
+  const busca = dslNorm(document.getElementById('us-multi-busca').value);
+  const grupos = new Map();
+  for (const f of us.filiais) {
+    if (busca && !dslNorm(`${f.nome} ${f.regional}`).includes(busca)) continue;
+    if (!grupos.has(f.regional)) grupos.set(f.regional, []);
+    grupos.get(f.regional).push(f.nome);
+  }
+  document.getElementById('us-multi-lista').innerHTML = [...grupos.entries()].map(([reg, nomes]) => {
+    const marcadas = nomes.filter(usTem).length;
+    return `<fieldset class="us-multi-grupo">
+      <label class="us-multi-reg"><input type="checkbox" data-us-reg="${esc(reg)}" ${marcadas === nomes.length ? 'checked' : ''}
+        ${marcadas && marcadas < nomes.length ? 'data-meio' : ''}> ${esc(reg)} <small>${marcadas ? `${marcadas} de ${nomes.length}` : `${nomes.length} usina(s)`} · marcar todas</small></label>
+      ${nomes.map(n => `<label class="us-multi-op"><input type="checkbox" data-us-usina="${esc(n)}" ${usTem(n) ? 'checked' : ''}> ${esc(n)}</label>`).join('')}
+    </fieldset>`;
+  }).join('') || '<p class="q-dica">Nenhuma usina encontrada.</p>';
+  document.querySelectorAll('#us-multi-lista [data-meio]').forEach(c => { c.indeterminate = true; });
+}
+function usAbrirPainel(abrir) {
+  const painel = document.getElementById('us-multi-painel');
+  painel.hidden = !abrir;
+  document.getElementById('us-multi-btn').setAttribute('aria-expanded', String(abrir));
+  if (abrir) { document.getElementById('us-multi-busca').value = ''; usRenderPainel(); document.getElementById('us-multi-busca').focus(); }
+}
+document.getElementById('us-multi-btn').addEventListener('click', () => usAbrirPainel(document.getElementById('us-multi-painel').hidden));
+document.getElementById('us-multi-ok').addEventListener('click', () => usAbrirPainel(false));
+document.getElementById('us-multi-limpar').addEventListener('click', () => { us.usinas = []; usRenderUsinas(); });
+document.getElementById('us-multi-busca').addEventListener('input', usRenderPainel);
+document.getElementById('us-multi-lista').addEventListener('change', (e) => {
+  const reg = e.target.dataset.usReg;
+  const nomes = reg !== undefined ? us.filiais.filter(f => f.regional === reg).map(f => f.nome) : [e.target.dataset.usUsina];
+  us.usinas = us.usinas.filter(u => !nomes.some(n => usMesma(n, u)));
+  if (e.target.checked) us.usinas.push(...nomes);
+  usRenderUsinas();
+});
+// Fecha a lista ao clicar fora dela ou com Esc.
+document.addEventListener('click', (e) => { if (!e.target.closest('#us-multi')) usAbrirPainel(false); });
+document.getElementById('us-multi').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); usAbrirPainel(false); document.getElementById('us-multi-btn').focus(); } });
+
 function usAddUsina() {
   const campo = document.getElementById('us-usina-nova');
   const v = campo.value.trim();
-  if (v && !us.usinas.some(u => u.toLowerCase() === v.toLowerCase())) us.usinas.push(v);
+  if (v && !usTem(v)) us.usinas.push(v);
   campo.value = '';
   usRenderUsinas();
 }
 document.getElementById('us-usina-nova').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); usAddUsina(); } });
-// Escolher uma sugestão da lista já adiciona a usina.
-document.getElementById('us-usina-nova').addEventListener('input', (e) => { if ((jaUsuario.usinas || []).includes(e.target.value)) usAddUsina(); });
 document.getElementById('us-chips').addEventListener('click', (e) => {
   const b = e.target.closest('[data-us-tirar]');
   if (b) { us.usinas.splice(Number(b.dataset.usTirar), 1); usRenderUsinas(); }
 });
+
+// ---------- Usinas e filiais por regional (cadastro) ----------
+function renderFiliais() {
+  const busca = dslNorm(document.getElementById('fl-busca').value);
+  const regs = new Map();
+  for (const f of us.filiais) {
+    if (busca && !dslNorm(`${f.nome} ${f.regional}`).includes(busca)) continue;
+    if (!regs.has(f.regional)) regs.set(f.regional, []);
+    regs.get(f.regional).push(f);
+  }
+  const regsTot = new Set(us.filiais.map(f => f.regional)).size;
+  document.getElementById('fl-qtd').textContent = us.filiais.length ? `· ${us.filiais.length} usina(s) em ${regsTot} regional(is)` : '';
+  const analistasDe = (nome) => us.lista.filter(u => u.ativo && u.papel === 'analista' && u.usinas.some(x => usMesma(x, nome))).map(u => u.nome.split(' ')[0]);
+  document.getElementById('fl-tabela').innerHTML = regs.size ? `
+    <tr><th>Regional</th><th>Usinas / filiais <small>(analistas que acompanham)</small></th></tr>
+    ${[...regs.entries()].map(([reg, lista]) => `<tr><td><strong>${esc(reg)}</strong><small class="sub">${lista.length} usina(s)</small></td>
+      <td><div class="fl-chips">${lista.map(f => { const an = analistasDe(f.nome); return `<span class="us-chip ${an.length ? '' : 'fl-sem'}" title="${an.length ? 'Analistas: ' + esc(an.join(', ')) : 'Sem analista'}">${esc(f.nome)}${an.length ? ` <small>· ${esc(an.join(', '))}</small>` : ''}<button type="button" data-fl-excluir="${f.id}" aria-label="Remover ${esc(f.nome)}">✕</button></span>`; }).join('')}</div></td></tr>`).join('')}`
+    : `<tr><td>${us.filiais.length ? 'Nada encontrado.' : 'Nenhuma usina cadastrada ainda. Importe a planilha das filiais por regional ou adicione uma por vez.'}</td></tr>`;
+}
+document.getElementById('fl-busca').addEventListener('input', renderFiliais);
+
+async function usRecarregarFiliais() {
+  us.filiais = await api('/api/admin/filiais');
+  await atualizarRegionais();
+  renderFiliais();
+  usRenderUsinas();
+}
+document.getElementById('fl-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await api('/api/admin/filiais', { method: 'POST', body: Object.fromEntries(new FormData(e.target)) });
+    e.target.nome.value = '';
+    e.target.nome.focus();
+    toast('Usina adicionada ✅');
+    await usRecarregarFiliais();
+  } catch (err) { toast(err.message, 'erro'); }
+});
+document.getElementById('fl-tabela').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-fl-excluir]');
+  if (!b) return;
+  const f = us.filiais.find(x => x.id === Number(b.dataset.flExcluir));
+  if (!confirm(`Remover “${f.nome}” da lista? Pessoas e acessos que já usam essa usina continuam como estão.`)) return;
+  try { await api(`/api/admin/filiais/${f.id}`, { method: 'DELETE' }); await usRecarregarFiliais(); } catch (err) { toast(err.message, 'erro'); }
+});
+
+// Importação: colunas REGIONAL e FILIAL/USINA, ou uma coluna por regional com as filiais embaixo.
+let flLinhas = [];
+async function flLerPlanilha(arquivo) {
+  const wb = XLSX.read(await arquivo.arrayBuffer(), { type: 'array', codepage: 65001 });
+  const matriz = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '', raw: false })
+    .map(l => l.map(v => String(v ?? '').trim()));
+  while (matriz.length && !matriz[0].some(Boolean)) matriz.shift();
+  if (!matriz.length) return [];
+  const cab = matriz[0].map(c => dslNorm(c).replace(/[^a-z0-9]+/g, ' ').trim());
+  const achar = (...nomes) => cab.findIndex(c => nomes.includes(c));
+  const cReg = achar('regional', 'regiao', 'regionais');
+  const cFil = achar('filial', 'filiais', 'usina', 'usinas', 'unidade', 'planta', 'nome', 'nome filial', 'nome da filial', 'nome usina', 'local');
+  if (cReg >= 0 && cFil >= 0) {
+    // Formato em linhas; a regional pode vir só na primeira linha do grupo (células mescladas).
+    let ultima = '';
+    return matriz.slice(1).map(l => ({ regional: (ultima = l[cReg] || ultima), nome: l[cFil] })).filter(l => l.nome);
+  }
+  // Formato em colunas: cada cabeçalho é uma regional.
+  return matriz[0].flatMap((reg, c) => (reg ? matriz.slice(1).map(l => ({ regional: reg, nome: l[c] })).filter(l => l.nome) : []));
+}
+document.getElementById('fl-arquivo').addEventListener('change', async (e) => {
+  const previa = document.getElementById('fl-previa');
+  const btn = document.getElementById('fl-importar');
+  flLinhas = [];
+  btn.disabled = true;
+  previa.innerHTML = '';
+  if (!e.target.files[0]) return;
+  try {
+    flLinhas = await flLerPlanilha(e.target.files[0]);
+    const regs = [...new Set(flLinhas.map(l => l.regional))];
+    previa.innerHTML = flLinhas.length
+      ? `${flLinhas.length} usina(s) em ${regs.length} regional(is): ${regs.slice(0, 6).map(r => `<strong>${esc(r)}</strong> (${flLinhas.filter(l => l.regional === r).length})`).join(', ')}${regs.length > 6 ? '…' : ''}`
+      : 'Não encontrei usinas na planilha. Use as colunas REGIONAL e FILIAL (baixe o modelo).';
+    btn.disabled = !flLinhas.length;
+  } catch (err) { previa.textContent = err.message; }
+});
+document.getElementById('fl-importar').addEventListener('click', async () => {
+  try {
+    const r = await api('/api/admin/filiais/importar', { method: 'POST', body: { linhas: flLinhas } });
+    toast(`${r.novas} nova(s), ${r.atualizadas} atualizada(s)${r.invalidas.length ? `, ${r.invalidas.length} com erro` : ''} ✅`);
+    document.getElementById('fl-previa').innerHTML = r.invalidas.slice(0, 10).map(i => `Linha ${i.linha}: ${esc(i.motivo)}`).join('<br>');
+    document.getElementById('fl-arquivo').value = '';
+    document.getElementById('fl-importar').disabled = true;
+    await usRecarregarFiliais();
+  } catch (err) { toast(err.message, 'erro'); }
+});
+document.getElementById('fl-modelo').addEventListener('click', () => {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([['REGIONAL', 'FILIAL'], ['Centro-Oeste', 'UTE Cuiabá'], ['Centro-Oeste', 'PCH Juba'], ['Sudeste', 'UTE Mário Covas']]);
+  ws['!cols'] = [{ wch: 22 }, { wch: 34 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Filiais');
+  XLSX.writeFile(wb, 'modelo-usinas-filiais-jornada-ambar.xlsx');
+});
+
 document.querySelector('#us-form [name="papel"]').addEventListener('change', usPapelMudou);
 
 function usLimparForm() {
@@ -143,7 +291,8 @@ function usMostrarCredencial(u, senha, titulo) {
 
 document.getElementById('us-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  usAddUsina(); // usina digitada e ainda não confirmada com Enter
+  if (!us.filiais.length) usAddUsina(); // usina digitada e ainda não confirmada com Enter
+  usAbrirPainel(false);
   const dados = { ...Object.fromEntries(new FormData(e.target)), usinas: us.usinas };
   try {
     if (us.editando) {

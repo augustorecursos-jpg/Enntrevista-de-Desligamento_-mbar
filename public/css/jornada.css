@@ -227,3 +227,26 @@ body.papel-regional [data-so-admin] { display: none !important; }
 .us-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .6rem; border-radius: 999px; background: #e6eef5; color: var(--marinho); font-size: .78rem; font-weight: 700; white-space: nowrap; }
 .us-chip button { border: 0; background: none; padding: 0 0 0 .1rem; color: var(--texto-suave); font-size: .75rem; line-height: 1; }
 .us-chip button:hover { color: var(--vermelho); }
+
+/* Lista suspensa de usinas (escolha múltipla, agrupada por regional) */
+.us-multi { position: relative; }
+.us-multi-btn { display: flex; justify-content: space-between; align-items: center; gap: .6rem; text-align: left; cursor: pointer; font-weight: 600; color: var(--texto); }
+.us-multi-btn b { color: var(--texto-suave); font-size: .8rem; }
+.us-multi-btn[aria-expanded="true"] { border-color: var(--marinho); box-shadow: 0 0 0 3px rgba(14, 59, 92, .14); }
+.us-multi-painel { margin-top: 6px; display: grid; gap: .6rem; padding: .7rem;
+  background: #fff; border: 1px solid var(--linha); border-radius: 12px; box-shadow: var(--sombra); }
+.us-multi-lista { max-height: 300px; overflow: auto; display: grid; gap: .5rem; }
+.us-multi-grupo { margin: 0; padding: 0 0 .4rem; border: 0; border-bottom: 1px solid var(--fundo-2); display: grid; gap: .1rem; }
+.us-multi-grupo:last-child { border-bottom: 0; }
+.dsl-campos .us-multi-reg, .dsl-campos .us-multi-op { display: flex; align-items: center; gap: .55rem; padding: .3rem .4rem; border-radius: 8px; cursor: pointer; font-weight: 400; }
+.dsl-campos .us-multi-reg { font-weight: 800; color: var(--marinho); font-size: .86rem; }
+.us-multi-reg small { font-weight: 400; color: var(--texto-suave); }
+.dsl-campos .us-multi-op { padding-left: 1.7rem; font-size: .88rem; color: var(--texto); }
+.us-multi-reg:hover, .us-multi-op:hover { background: var(--fundo); }
+.us-multi input[type="checkbox"] { flex-shrink: 0; width: 16px; height: 16px; margin: 0; accent-color: var(--marinho); }
+.us-multi-rodape { display: flex; justify-content: space-between; }
+.fl-nova { margin: .8rem 0; }
+.fl-nova .campo { flex: 1; min-width: 160px; }
+.fl-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.fl-chips .us-chip small { font-weight: 600; color: var(--texto-suave); }
+.us-chip.fl-sem { background: var(--fundo-2); color: var(--texto-suave); }

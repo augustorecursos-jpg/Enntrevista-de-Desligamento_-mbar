@@ -75,6 +75,11 @@ Tudo é editável pelo RH (perguntas, prazos e mensagens) e exporta para Excel.
     formulários, usuários nem backup. O "link geral" da entrevista dele marca a usina (`?u=<usina>`); com mais de
     uma usina, ele escolhe de qual usina é o link. A usina vem da coluna **USINA** da planilha de admissões (também
     aceita PLANTA, LOCAL, LOCAL DE TRABALHO, UNIDADE DE TRABALHO ou SITE) ou do campo *Usina / unidade* do cadastro.
+- **Usinas e filiais por regional** (em Usuários e acessos, somente administradores): lista oficial das usinas, importada
+  da planilha (colunas REGIONAL e FILIAL/USINA, ou uma coluna por regional com as filiais embaixo; reimportar atualiza
+  sem duplicar) ou cadastrada uma a uma. No acesso do analista, as usinas são marcadas numa **lista suspensa com
+  escolha múltipla**, agrupada por regional (com busca e "marcar todas" da regional). Com a lista preenchida, só valem
+  usinas dela, e a regional de cada usina passa a vir dela.
 - **Backup**: baixa uma cópia completa do banco (somente administradores).
 
 ## Guia do RH (e-book)

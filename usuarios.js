@@ -2,6 +2,7 @@
 // analistas de RH. Coordenadores enxergam somente a própria regional; analistas, somente as usinas que acompanham.
 const crypto = require('node:crypto');
 const { db } = require('./db');
+const filiais = require('./filiais');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS usuarios (
@@ -67,6 +68,12 @@ function ler(b, novo) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(u.email)) return { erro: 'Informe um e-mail válido (é o login do usuário).' };
   if (u.papel === 'regional' && !u.regional) return { erro: 'Informe a regional do coordenador.' };
   if (u.papel === 'analista' && !u.usinas.length) return { erro: 'Informe ao menos uma usina que o analista acompanha.' };
+  // Com o cadastro de usinas e filiais preenchido, só valem usinas da lista (com a grafia de lá).
+  if (u.papel === 'analista' && filiais.listar().length) {
+    const fora = u.usinas.filter(x => !filiais.buscarPorNome(x));
+    if (fora.length) return { erro: `Usina fora do cadastro de usinas e filiais: ${fora.join(', ')}.` };
+    u.usinas = u.usinas.map(x => filiais.buscarPorNome(x).nome);
+  }
   if (u.papel !== 'analista') u.usinas = [];
   if (u.papel === 'admin') u.regional = '';
   if (novo && b?.senha && !senhaValida(b.senha)) return { erro: 'A senha precisa ter pelo menos 8 caracteres.' };

@@ -1,6 +1,7 @@
 // O que cada usuário da área do RH enxerga: o admin vê tudo (escopo nulo), o coordenador regional vê a própria
 // regional ({ regional }) e o analista de RH vê as usinas que acompanha ({ usinas: [...] }).
 const { db } = require('./db');
+const filiais = require('./filiais');
 
 /** Usina de pessoas, convites e respostas da entrevista de desligamento (roda depois de criadas as tabelas). */
 function migrar() {
@@ -11,9 +12,11 @@ function migrar() {
 
 const norm = (s) => String(s ?? '').trim().toLowerCase();
 
-/** Regional mais comum entre as pessoas já cadastradas na usina (ou '' se a usina ainda não tem ninguém). */
+/** Regional da usina: a do cadastro de usinas e filiais; senão, a mais comum entre as pessoas já cadastradas nela. */
 function regionalDaUsina(usina) {
   if (!usina) return '';
+  const filial = filiais.buscarPorNome(usina);
+  if (filial) return filial.regional;
   return db.prepare(`SELECT regional FROM pessoas WHERE lower(trim(usina)) = ? AND COALESCE(regional, '') <> ''
     GROUP BY regional ORDER BY count(*) DESC LIMIT 1`).get(norm(usina))?.regional || '';
 }
