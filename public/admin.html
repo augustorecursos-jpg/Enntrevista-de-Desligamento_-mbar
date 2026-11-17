@@ -59,6 +59,7 @@
         <p class="jl-dica">🔒 Acesso exclusivo do time de RH. Esqueceu a senha? Peça ao administrador da Jornada para redefini-la.<br>📘 Primeira vez aqui? <a href="guia/guia-do-rh.pdf" target="_blank" rel="noopener">Veja o Guia do RH</a>.</p>
       </form>
       <div class="jl-processos">
+        <span><img src="img/favicon-selecao.svg" alt=""> Processo Seletivo</span>
         <span><img src="img/favicon-conexoes.svg" alt=""> Primeiras Conexões</span>
         <span><img src="img/favicon-experiencia.svg" alt=""> Avaliação de Experiência</span>
         <span><img src="img/favicon-desligamento.svg" alt=""> Entrevista de Desligamento</span>
@@ -70,6 +71,10 @@
     <span class="lateral-marca logo claro"><b>Âmbar</b><small>JORNADA ÂMBAR · RH</small></span>
     <button class="lateral-item" data-view="inicio"><span class="ic">🏠</span>Início</button>
     <button class="lateral-item" data-view="pessoas"><span class="ic">👥</span>Pessoas</button>
+    <p class="lateral-grupo">RECRUTAMENTO E SELEÇÃO</p>
+    <button class="lateral-item" data-view="rs-acompanhar"><span class="ic">🎯</span>Acompanhar<span class="qtd" id="qtd-rs" hidden></span></button>
+    <button class="lateral-item" data-view="rs-indicadores"><span class="ic">📊</span>Indicadores</button>
+    <button class="lateral-item" data-view="rs-formulario" data-so-admin><span class="ic">🧾</span>Formulário</button>
     <p class="lateral-grupo">PRIMEIRAS CONEXÕES · 15 DIAS</p>
     <button class="lateral-item" data-view="pc-acompanhar"><span class="ic">🤝</span>Acompanhar<span class="qtd" id="qtd-pc" hidden></span></button>
     <button class="lateral-item" data-view="pc-indicadores"><span class="ic">💬</span>Indicadores</button>
@@ -118,6 +123,16 @@
           </div>
         </div>
         <div class="ja-processos">
+          <article class="ja-processo ja-rs">
+            <span class="ja-ic">🎯</span>
+            <h2>Processo Seletivo</h2>
+            <p>O gestor que pediu a vaga avalia o Recrutamento e Seleção.</p>
+            <ul class="ja-nums" id="ja-nums-rs"></ul>
+            <div class="ja-acoes">
+              <button class="btn btn-marinho btn-sm" data-ir-view="rs-acompanhar">Acompanhar</button>
+              <button class="btn btn-claro btn-sm" data-ir-view="rs-indicadores">Ver indicadores</button>
+            </div>
+          </article>
           <article class="ja-processo ja-pc">
             <span class="ja-ic">🤝</span>
             <h2>Primeiras Conexões</h2>
@@ -165,7 +180,7 @@
           </div>
         </div>
         <div class="cartao">
-          <h3>📥 Importar planilha de admissões <small>· Excel ou CSV com NOME, CHAPA, CARGO, SETOR, REGIONAL, USINA, GESTOR, ADMISSAO (e, se quiser, TELEFONE GESTOR, EMAIL GESTOR, TELEFONE, EMAIL). Para coordenadores, a regional é preenchida automaticamente; analistas só importam pessoas das próprias usinas</small></h3>
+          <h3>📥 Importar planilha de admissões <small>· Excel ou CSV com NOME, CHAPA, CARGO, SETOR, REGIONAL, USINA, GESTOR, ADMISSAO (e, se quiser, TELEFONE GESTOR, EMAIL GESTOR, TELEFONE, EMAIL, RECRUTADOR, EMPRESA). Para coordenadores, a regional é preenchida automaticamente; analistas só importam pessoas das próprias usinas</small></h3>
           <div class="importar">
             <input type="file" id="pes-arquivo" accept=".xlsx,.xls,.csv" class="campo">
             <button class="btn btn-laranja" id="pes-importar" disabled>Importar</button>
@@ -181,6 +196,84 @@
           <div class="tabela-wrap"><table class="tabela" id="pes-tabela"></table></div>
         </div>
       </section>
+
+      <!-- Recrutamento e Seleção: acompanhar -->
+      <section data-view-painel="rs-acompanhar" hidden>
+        <div class="ind-cab">
+          <h1 class="titulo-pagina">Avaliação do <em>processo seletivo</em></h1>
+          <div class="filtros">
+            <select class="campo" id="rk-regional" aria-label="Regional" data-so-admin><option value="">Todas as regionais</option></select>
+            <select class="campo" id="rk-usina" aria-label="Usina" data-ocultar-vazio><option value="">Todas as usinas</option></select>
+            <select class="campo" id="rk-recrutador" aria-label="Recrutador"><option value="">Todos os recrutadores</option></select>
+            <input class="campo" id="rk-busca" placeholder="Buscar vaga, gestor…" aria-label="Buscar">
+            <label class="check"><input type="checkbox" id="rk-dispensadas"> Mostrar dispensadas</label>
+            <button type="button" class="btn btn-laranja btn-sm" id="rk-nova">+ Nova avaliação</button>
+          </div>
+        </div>
+        <p class="q-dica" id="rk-regra"></p>
+        <div class="kanban tres" id="rk-kanban"></div>
+      </section>
+
+      <!-- Recrutamento e Seleção: indicadores -->
+      <section data-view-painel="rs-indicadores" hidden>
+        <div class="ind-cab">
+          <h1 class="titulo-pagina">Indicadores do <em>processo seletivo</em></h1>
+          <div class="filtros">
+            <select class="campo" id="ri-regional" aria-label="Regional" data-so-admin><option value="">Todas as regionais</option></select>
+            <select class="campo" id="ri-usina" aria-label="Usina" data-ocultar-vazio><option value="">Todas as usinas</option></select>
+            <select class="campo" id="ri-empresa" aria-label="Empresa"><option value="">Todas as empresas</option></select>
+            <select class="campo" id="ri-recrutador" aria-label="Recrutador"><option value="">Todos os recrutadores</option></select>
+            <label class="filtro-data">Resposta de <input class="campo" type="date" id="ri-de"></label>
+            <label class="filtro-data">até <input class="campo" type="date" id="ri-ate"></label>
+            <button type="button" class="btn btn-laranja btn-sm" id="ri-exportar">⬇ Exportar Excel</button>
+          </div>
+        </div>
+        <div class="kpis" id="ri-kpis"></div>
+        <section class="cartao"><h3>🗺️ Visão por regional <small>· médias de 1 a 3 e % das respostas · verde ≥ 2,5 · laranja 2 a 2,5 · vermelho &lt; 2</small></h3>
+          <div class="tabela-wrap"><table class="tabela rs-mapa" id="ri-regionais"></table></div></section>
+        <div class="ind-grade" style="margin-top:1.4rem">
+          <section class="cartao"><h3>Os critérios <small>· distribuição das notas e média</small></h3><div id="ri-criterios"></div></section>
+          <section class="cartao"><h3>⚠️ Para agir agora <small>· avaliações com nota 1 (insatisfeito)</small></h3><div class="pc-agir" id="ri-agir"></div></section>
+        </div>
+        <div class="ind-grade" style="margin-top:1.4rem">
+          <section class="cartao"><h3>Por recrutador(a)</h3><div class="tabela-wrap"><table class="tabela rs-mapa" id="ri-recrutadores"></table></div></section>
+          <section class="cartao"><h3>Por empresa do grupo</h3><div class="tabela-wrap"><table class="tabela rs-mapa" id="ri-empresas"></table></div></section>
+        </div>
+        <div class="ind-grade" style="margin-top:1.4rem">
+          <section class="cartao"><h3>Os candidatos estavam aderentes ao perfil?</h3><div class="grafico-barras" id="ri-aderencia"></div></section>
+          <section class="cartao"><h3>O tempo de fechamento foi adequado?</h3><div class="grafico-barras" id="ri-tempo"></div></section>
+        </div>
+        <section class="cartao" style="margin-top:1.4rem"><h3>💬 O que os gestores disseram <small>· respostas abertas mais recentes</small></h3><div class="pc-falas" id="ri-falas"></div></section>
+      </section>
+
+      <!-- Recrutamento e Seleção: formulário -->
+      <form data-view-painel="rs-formulario" id="rf-form" hidden>
+        <h1 class="titulo-pagina">Formulário da <em>avaliação do processo seletivo</em></h1>
+        <div class="cartao">
+          <h3>⚙️ Configurações</h3>
+          <div class="dsl-campos">
+            <label class="largo">Título<input class="campo" id="rf-titulo" maxlength="120"></label>
+            <label class="largo">Texto de abertura (aparece abaixo do título)<textarea class="campo" id="rf-introducao" rows="2" maxlength="2000"></textarea></label>
+            <label>Criar sozinha para admitidos a partir de <small>· pessoas cadastradas antes não recebem (vazio = todas)</small><input class="campo" id="rf-admissao-minima" type="date"></label>
+            <label>Sugerir lembrete após (dias sem resposta)<input class="campo" id="rf-dias-lembrete" type="number" min="1" max="60"></label>
+            <label class="largo">Assunto do e-mail <small>· use {vaga}</small><input class="campo" id="rf-assunto" maxlength="200"></label>
+            <label class="largo">Mensagem ao gestor (WhatsApp e texto do e-mail) <small>· use {gestor}, {vaga}, {candidato} e {link}</small><textarea class="campo" id="rf-mensagem" rows="3" maxlength="2000"></textarea></label>
+            <label class="largo">Mensagem de lembrete <small>· use {gestor}, {vaga}, {candidato} e {link}</small><textarea class="campo" id="rf-mensagem-lembrete" rows="3" maxlength="2000"></textarea></label>
+          </div>
+          <label class="check" style="margin-top:.8rem"><input type="checkbox" id="rf-ativa"> Formulário recebendo respostas</label>
+        </div>
+        <div class="cartao" style="margin-top:1.4rem">
+          <h3>📝 Critérios e perguntas <small>· nas notas, coloque as opções da melhor para a pior (Muito satisfeito, Satisfeito, Insatisfeito): o gestor vê de 1 a 3</small></h3>
+          <p class="q-dica">A pergunta com o código <code>satisfacao_geral</code> alimenta o indicador de satisfação geral; <code>aderencia</code> e <code>tempo</code> alimentam os de aderência e tempo de fechamento.</p>
+          <div id="rf-secoes" class="reacao-editor"></div>
+          <div class="linha-form"><button type="button" class="btn btn-claro btn-sm" id="rf-add-secao">➕ Adicionar seção</button></div>
+        </div>
+        <div class="barra-salvar">
+          <button type="button" class="btn btn-claro btn-sm" id="rf-restaurar">↺ Restaurar modelo original</button>
+          <a class="btn btn-claro btn-sm" href="selecao.html?previa=1" target="_blank" rel="noopener">👁 Pré-visualizar (versão salva)</a>
+          <button class="btn btn-laranja" type="submit">Salvar formulário</button>
+        </div>
+      </form>
 
       <!-- Primeiras Conexões: acompanhar -->
       <section data-view-painel="pc-acompanhar" hidden>
@@ -540,7 +633,7 @@
     </main>
   </div>
 
-  <datalist id="lista-regionais"></datalist><datalist id="lista-usinas"></datalist>
+  <datalist id="lista-regionais"></datalist><datalist id="lista-usinas"></datalist><datalist id="lista-empresas"></datalist><datalist id="lista-recrutadores"></datalist>
 
   <!-- Minha conta -->
   <dialog class="modal modal-prova" id="modal-conta">
@@ -572,6 +665,8 @@
           <label>Data de admissão *<input class="campo" name="admissao" type="date" required></label>
           <label data-so-admin>Regional<input class="campo" name="regional" maxlength="100" list="lista-regionais" placeholder="Ex.: Centro-Oeste"></label>
           <label>Usina / unidade<input class="campo" name="usina" maxlength="100" list="lista-usinas" placeholder="Ex.: UTE Cuiabá"></label>
+          <label>Empresa<input class="campo" name="empresa" maxlength="100" list="lista-empresas" placeholder="Ex.: Âmbar Energia"></label>
+          <label>Recrutador(a) da vaga<input class="campo" name="recrutador" maxlength="200" list="lista-recrutadores"></label>
           <label>Cargo<input class="campo" name="cargo" maxlength="200" list="lista-cargos"></label>
           <label>Setor<input class="campo" name="setor" maxlength="200" list="lista-setores"></label>
           <label>WhatsApp do colaborador<input class="campo" name="telefone" inputmode="tel" maxlength="40"></label>
@@ -600,6 +695,52 @@
       <button type="button" class="btn btn-claro btn-sm" id="xp-imprimir">🖨 Imprimir / PDF</button>
       <button type="button" class="btn btn-claro btn-sm" data-fechar aria-label="Fechar">✕</button></header>
     <div class="prova-corpo" id="xp-modal-corpo"></div>
+  </dialog>
+
+  <!-- Processo seletivo: nova avaliação (vaga fora da planilha) -->
+  <dialog class="modal modal-prova" id="modal-rs-nova">
+    <form id="form-rs-nova">
+      <header><div><small>RECRUTAMENTO E SELEÇÃO</small><h3>Nova avaliação do processo seletivo</h3></div>
+        <button type="button" class="btn btn-claro btn-sm" data-fechar aria-label="Fechar">✕</button></header>
+      <div class="prova-corpo">
+        <p class="q-dica">Use para vagas que não vieram pela planilha de admissões. As pessoas cadastradas em Pessoas já ganham a avaliação sozinhas.</p>
+        <div class="dsl-campos">
+          <label class="largo">Vaga *<input class="campo" name="vaga" required maxlength="200" list="lista-cargos"></label>
+          <label>Pessoa aprovada<input class="campo" name="candidato" maxlength="200"></label>
+          <label>Data de admissão<input class="campo" name="admissao" type="date"></label>
+          <label>Gestor(a) requisitante *<input class="campo" name="gestor" required maxlength="200" list="lista-gestores"></label>
+          <label>E-mail do gestor<input class="campo" name="gestor_email" type="email" maxlength="200"></label>
+          <label>WhatsApp do gestor<input class="campo" name="gestor_telefone" inputmode="tel" maxlength="40"></label>
+          <label>Recrutador(a)<input class="campo" name="recrutador" maxlength="200" list="lista-recrutadores"></label>
+          <label>Empresa<input class="campo" name="empresa" maxlength="100" list="lista-empresas"></label>
+          <label data-so-admin>Regional<input class="campo" name="regional" maxlength="100" list="lista-regionais"></label>
+          <label>Usina / unidade<input class="campo" name="usina" maxlength="100" list="lista-usinas"></label>
+        </div>
+      </div>
+      <footer><span></span><button class="btn btn-laranja" type="submit">Criar avaliação</button></footer>
+    </form>
+  </dialog>
+
+  <!-- Processo seletivo: e-mail com QR Code para colar no e-mail de quem envia -->
+  <dialog class="modal modal-prova rs-email-modal" id="modal-rs-email">
+    <header><div><small>E-MAIL PARA O GESTOR</small><h3 id="rs-email-titulo">Gestor</h3></div>
+      <button type="button" class="btn btn-claro btn-sm" data-fechar aria-label="Fechar">✕</button></header>
+    <div class="prova-corpo">
+      <ol class="rs-passos">
+        <li><button type="button" class="btn btn-laranja btn-sm" id="rs-email-copiar">📋 1. Copiar o e-mail</button> com a arte, o QR Code e as logos.</li>
+        <li><a class="btn btn-marinho btn-sm" id="rs-email-abrir">✉️ 2. Abrir meu e-mail</a> já com o gestor e o assunto preenchidos.</li>
+        <li>Apague o texto do corpo e cole (<kbd>Ctrl</kbd>+<kbd>V</kbd>) o e-mail copiado. Se preferir, envie só o texto: ele já tem o link.</li>
+      </ol>
+      <div class="rs-email-previa" id="rs-email-previa"></div>
+    </div>
+  </dialog>
+
+  <!-- Processo seletivo: respostas do gestor -->
+  <dialog class="modal modal-prova modal-xp" id="modal-rs">
+    <header><div><small>AVALIAÇÃO DO PROCESSO SELETIVO</small><h3 id="rs-modal-titulo">Vaga</h3></div>
+      <button type="button" class="btn btn-claro btn-sm" id="rs-imprimir">🖨 Imprimir / PDF</button>
+      <button type="button" class="btn btn-claro btn-sm" data-fechar aria-label="Fechar">✕</button></header>
+    <div class="prova-corpo" id="rs-modal-corpo"></div>
   </dialog>
 
   <!-- Primeiras Conexões: respostas do colaborador -->
@@ -646,6 +787,7 @@
   <script src="js/admin-desligamento.js"></script>
   <script src="js/admin-experiencia.js"></script>
   <script src="js/admin-conexoes.js"></script>
+  <script src="js/admin-selecao.js"></script>
   <script src="js/admin-usuarios.js"></script>
   <script src="js/admin.js"></script>
 </body>

@@ -32,7 +32,7 @@ async function mostrarPainel() {
   document.getElementById('lateral').hidden = false;
   document.getElementById('principal').hidden = false;
   aplicarPerfil();
-  await Promise.all([carregarDesligamento(), xpCarregar(), pcCarregar()]);
+  await Promise.all([carregarDesligamento(), xpCarregar(), pcCarregar(), rsCarregar()]);
   irPara(location.hash.slice(1) || 'inicio');
   if (jaUsuario.trocar_senha) abrirConta(true);
 }
@@ -41,6 +41,9 @@ async function mostrarPainel() {
 const VISOES = {
   inicio: ['Início', () => renderInicio()],
   pessoas: ['Pessoas', () => renderPessoas()],
+  'rs-acompanhar': ['Processo seletivo', () => renderRsKanban()],
+  'rs-indicadores': ['Processo seletivo · Indicadores', () => renderRsIndicadores()],
+  'rs-formulario': ['Processo seletivo · Formulário', () => renderRsFormulario()],
   'pc-acompanhar': ['Primeiras Conexões', () => renderPcKanban()],
   'pc-indicadores': ['Primeiras Conexões · Indicadores', () => renderPcIndicadores()],
   'pc-formulario': ['Primeiras Conexões · Formulário', () => renderPcFormulario()],
@@ -49,7 +52,7 @@ const VISOES = {
   'exp-formulario': ['Avaliação de experiência · Formulário', () => renderXpFormulario()],
   usuarios: ['Usuários e acessos', () => renderUsuarios()],
 };
-const SO_ADMIN = ['exp-formulario', 'pc-formulario', 'usuarios', 'dsl-formulario'];
+const SO_ADMIN = ['exp-formulario', 'pc-formulario', 'rs-formulario', 'usuarios', 'dsl-formulario'];
 const SUBS_DSL = { enviar: 'Enviar', indicadores: 'Indicadores', respostas: 'Respostas', formulario: 'Formulário' };
 let visaoAtual = 'inicio';
 

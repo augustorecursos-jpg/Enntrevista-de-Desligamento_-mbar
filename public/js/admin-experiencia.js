@@ -100,6 +100,7 @@ function renderInicio() {
     + n(dsl.respostas.filter(r => !r.recusou && r.criado_em.slice(0, 7) === mes).length, 'respondidas no mês')
     + n(dsl.respostas.filter(r => r.alerta).length, 'alertas', dsl.respostas.some(r => r.alerta) ? 'alerta' : '');
   renderPcInicio();
+  renderRsInicio();
 
   const limite = (() => { const d = new Date(); d.setDate(d.getDate() + 15); return d.toISOString().slice(0, 10); })();
   const agenda = xp.avaliacoes.filter(a => xpAtiva(a) && a.prazo <= limite).sort((a, b) => a.prazo.localeCompare(b.prazo));
@@ -182,7 +183,7 @@ document.getElementById('form-pessoa').addEventListener('submit', async (e) => {
     else await api('/api/admin/pessoas', { method: 'POST', body: dados });
     document.getElementById('modal-pessoa').close();
     toast(xpPessoaEditando ? 'Cadastro atualizado ✅' : 'Pessoa cadastrada ✅ Avaliações do 1º e 2º período criadas.');
-    await Promise.all([xpCarregar(), pcCarregar()]);
+    await Promise.all([xpCarregar(), pcCarregar(), rsCarregar()]);
     renderVisaoAtual();
     if (xpPessoaEditando && document.getElementById('modal-ficha').open) xpAbrirFicha(xpPessoaEditando.id);
   } catch (err) { toast(err.message, 'erro'); }
@@ -221,6 +222,7 @@ function xpAbrirFicha(id) {
       </span>
     </div>
     <ol class="tl">
+      ${rsEtapaFicha(p)}
       ${etapa('🎉', 'Admissão', xpData(p.admissao), '', 'feita')}
       ${pcEtapaFicha(p)}
       ${etapaAv(av[0])}${etapaAv(av[1])}
@@ -241,7 +243,7 @@ document.addEventListener('click', async (e) => {
     if (!confirm(`Excluir ${p.nome} e as avaliações de experiência dele(a)? A entrevista de desligamento, se houver, é mantida.`)) return;
     await api(`/api/admin/pessoas/${p.id}`, { method: 'DELETE' });
     document.getElementById('modal-ficha').close();
-    await Promise.all([xpCarregar(), pcCarregar()]);
+    await Promise.all([xpCarregar(), pcCarregar(), rsCarregar()]);
     return renderVisaoAtual();
   }
   const iniciar = e.target.closest('[data-iniciar-dsl]');
@@ -288,6 +290,7 @@ async function xpLerPlanilha(arquivo) {
     admissao: achar('admissao', 'data de admissao', 'data admissao'),
     gestor_telefone: achar('telefone gestor', 'whatsapp gestor', 'celular gestor'), gestor_email: achar('email gestor', 'e mail gestor'),
     telefone: achar('telefone', 'whatsapp', 'celular', 'telefone colaborador'), email: achar('email', 'e mail', 'email colaborador'),
+    recrutador: achar('recrutador', 'recrutadora', 'recrutador a', 'analista de selecao', 'responsavel selecao'), empresa: achar('empresa', 'empresa do grupo', 'razao social'),
   };
   if (col.nome < 0 || col.admissao < 0) throw new Error('A planilha precisa ter ao menos as colunas NOME e ADMISSAO.');
   return matriz.slice(1).filter(l => l.some(v => String(v).trim())).map(l => {
@@ -318,17 +321,17 @@ document.getElementById('pes-importar').addEventListener('click', async () => {
     document.getElementById('pes-previa').innerHTML = r.invalidas.length ? r.invalidas.slice(0, 10).map(i => `Linha ${i.linha}: ${esc(i.motivo)}`).join('<br>') : '';
     document.getElementById('pes-arquivo').value = '';
     document.getElementById('pes-importar').disabled = true;
-    await Promise.all([xpCarregar(), pcCarregar()]);
+    await Promise.all([xpCarregar(), pcCarregar(), rsCarregar()]);
     renderPessoas();
   } catch (err) { toast(err.message, 'erro'); }
 });
 document.getElementById('pes-modelo').addEventListener('click', () => {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
-    ['NOME', 'CHAPA', 'CARGO', 'SETOR', 'REGIONAL', 'USINA', 'GESTOR', 'ADMISSAO', 'TELEFONE GESTOR', 'EMAIL GESTOR', 'TELEFONE', 'EMAIL'],
-    ['Maria da Silva', '123456', 'Assistente de Logística', 'Logística', jaUsuario?.regional || 'Centro-Oeste', jaUsuario?.usinas?.[0] || 'UTE Cuiabá', 'João Souza', new Date(), '(65) 99999-0000', 'joao@empresa.com', '(65) 98888-0000', 'maria@email.com'],
+    ['NOME', 'CHAPA', 'CARGO', 'SETOR', 'REGIONAL', 'USINA', 'GESTOR', 'ADMISSAO', 'TELEFONE GESTOR', 'EMAIL GESTOR', 'TELEFONE', 'EMAIL', 'RECRUTADOR', 'EMPRESA'],
+    ['Maria da Silva', '123456', 'Assistente de Logística', 'Logística', jaUsuario?.regional || 'Centro-Oeste', jaUsuario?.usinas?.[0] || 'UTE Cuiabá', 'João Souza', new Date(), '(65) 99999-0000', 'joao@empresa.com', '(65) 98888-0000', 'maria@email.com', 'Juliana Prado', 'Âmbar Energia'],
   ], { cellDates: true, dateNF: 'dd/mm/yyyy' });
-  ws['!cols'] = Array(11).fill({ wch: 20 });
+  ws['!cols'] = Array(14).fill({ wch: 20 });
   XLSX.utils.book_append_sheet(wb, ws, 'Admissões');
   XLSX.writeFile(wb, 'modelo-admissoes-jornada-ambar.xlsx');
 });

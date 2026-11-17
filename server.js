@@ -1,5 +1,5 @@
 // Jornada Âmbar · Âmbar Energia (RH / DHO)
-// Servidor HTTP: Primeiras Conexões, avaliação de experiência, entrevista de desligamento, área do RH (senha) e arquivos estáticos.
+// Servidor HTTP: avaliação do processo seletivo, Primeiras Conexões, avaliação de experiência, entrevista de desligamento, área do RH (senha) e arquivos estáticos.
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
@@ -177,6 +177,9 @@ require('./desligamento').registrar(app, { exigirAdmin, exigirMaster, limitadorD
 
 // Avaliação de experiência: pessoas, avaliação do gestor, ciência do colaborador e QR Code.
 require('./experiencia').registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas });
+
+// Avaliação do processo seletivo: o gestor requisitante avalia o Recrutamento e Seleção.
+require('./selecao').registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas });
 
 // Primeiras Conexões: avaliação dos primeiros 15 dias respondida pelo colaborador.
 require('./conexoes').registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas });

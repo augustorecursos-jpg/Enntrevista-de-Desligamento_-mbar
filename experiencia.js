@@ -65,6 +65,10 @@ db.exec(`
 `);
 // Regional da pessoa: coordenadores de RH regionais só enxergam a própria.
 if (!db.prepare('PRAGMA table_info(pessoas)').all().some(c => c.name === 'regional')) db.exec('ALTER TABLE pessoas ADD COLUMN regional TEXT');
+// Recrutador(a) e empresa do grupo da vaga (usados na avaliação do processo seletivo).
+for (const coluna of ['recrutador', 'empresa']) {
+  if (!db.prepare('PRAGMA table_info(pessoas)').all().some(c => c.name === coluna)) db.exec(`ALTER TABLE pessoas ADD COLUMN ${coluna} TEXT`);
+}
 // Confirmação do gestor de que o colaborador está de acordo com a avaliação (exigida para enviar).
 if (!db.prepare('PRAGMA table_info(exp_avaliacoes)').all().some(c => c.name === 'colaborador_de_acordo')) {
   db.exec('ALTER TABLE exp_avaliacoes ADD COLUMN colaborador_de_acordo INTEGER NOT NULL DEFAULT 0');
@@ -190,7 +194,7 @@ function lerPessoa(b) {
     nome: texto(b?.nome, 200), chapa: texto(b?.chapa, 60), cargo: texto(b?.cargo, 200), setor: texto(b?.setor, 200),
     gestor: texto(b?.gestor, 200), gestor_telefone: texto(b?.gestor_telefone, 40), gestor_email: texto(b?.gestor_email, 200),
     telefone: texto(b?.telefone, 40), email: texto(b?.email, 200), admissao: dataValida(b?.admissao), regional: texto(b?.regional, 100),
-    usina: texto(b?.usina, 100),
+    usina: texto(b?.usina, 100), recrutador: texto(b?.recrutador, 200), empresa: texto(b?.empresa, 100),
   };
   if (!p.nome) return { erro: 'Informe o nome do colaborador.' };
   if (!p.admissao) return { erro: `Informe a data de admissão de ${p.nome}.` };
@@ -217,11 +221,12 @@ function publico(a, form) {
 
 /** A pessoa (ou a avaliação, pela pessoa) está na regional ou nas usinas de quem acessa? Admin (escopo nulo) vê tudo. */
 const daRegional = (escopo, pessoaId) => !escopo || escopos.permite(escopo, db.prepare('SELECT regional, usina FROM pessoas WHERE id = ?').get(pessoaId));
-const INSERIR_PESSOA = `INSERT INTO pessoas (nome, chapa, cargo, setor, regional, usina, gestor, gestor_telefone, gestor_email, telefone, email, admissao)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+const INSERIR_PESSOA = `INSERT INTO pessoas (nome, chapa, cargo, setor, regional, usina, gestor, gestor_telefone, gestor_email, telefone, email, admissao, recrutador, empresa)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 const ATUALIZAR_PESSOA = `UPDATE pessoas SET nome = ?, chapa = ?, cargo = ?, setor = ?, regional = ?, usina = ?, gestor = ?, gestor_telefone = ?, gestor_email = ?,
-  telefone = ?, email = ?, admissao = ? WHERE id = ?`;
-const camposPessoa = (p) => [p.nome, p.chapa, p.cargo, p.setor, p.regional, p.usina, p.gestor, p.gestor_telefone, p.gestor_email, p.telefone, p.email, p.admissao];
+  telefone = ?, email = ?, admissao = ?, recrutador = ?, empresa = ? WHERE id = ?`;
+const camposPessoa = (p) => [p.nome, p.chapa, p.cargo, p.setor, p.regional, p.usina, p.gestor, p.gestor_telefone, p.gestor_email, p.telefone, p.email, p.admissao,
+  p.recrutador, p.empresa];
 
 function registrar(app, { exigirAdmin, exigirMaster, limitadorDeFalhas }) {
   const limite = limitadorDeFalhas({ maximo: 40, janelaMin: 15 });

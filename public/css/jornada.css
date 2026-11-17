@@ -4,7 +4,7 @@
 .ja-boas small { font-family: var(--fonte-titulo); font-size: .72rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--laranja); }
 .ja-boas .titulo-pagina { font-size: clamp(1.7rem, 3vw, 2.3rem); margin: .3rem 0 .3rem; }
 .ja-boas p { margin: 0 0 1.4rem; color: var(--texto-suave); }
-.ja-processos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.2rem; }
+.ja-processos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.2rem; }
 .ja-processo { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: .6rem; padding: 1.5rem; border-radius: 18px; background: #fff; border: 1px solid var(--linha); }
 .ja-processo::after { content: ''; position: absolute; right: -50px; top: -50px; width: 160px; height: 160px; border-radius: 50%; pointer-events: none; }
 .ja-exp { border-top: 4px solid var(--laranja); }
@@ -93,7 +93,7 @@
 .modal-xp { max-width: 900px; }
 .modal-xp .xp-ler-bloco { padding: .1rem 1rem .4rem; }
 
-@media (max-width: 1100px) { .ja-processos { grid-template-columns: 1fr 1fr; } .ja-dsl { grid-column: 1 / -1; } }
+@media (max-width: 1300px) { .ja-processos { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 700px) { .ja-processos { grid-template-columns: 1fr; } .kanban { grid-template-columns: repeat(4, 82vw); } }
 .tl-etapa > div { justify-items: start; }
 .tl-etapa > div > .acoes-envio, .tl-etapa > div > .convite-novo { justify-self: stretch; }
@@ -250,3 +250,33 @@ body.papel-regional [data-so-admin] { display: none !important; }
 .fl-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
 .fl-chips .us-chip small { font-weight: 600; color: var(--texto-suave); }
 .us-chip.fl-sem { background: var(--fundo-2); color: var(--texto-suave); }
+
+/* Avaliação do processo seletivo (área do RH) */
+.ja-rs { border-top: 4px solid #0a2c45; }
+.ja-rs::after { background: radial-gradient(circle, rgba(236, 107, 36, .16), transparent 65%); }
+.kanban.tres { grid-template-columns: repeat(3, minmax(260px, 1fr)); }
+.kanban.quatro { grid-template-columns: repeat(4, minmax(240px, 1fr)); }
+.rs-mapa td.v, .rs-mapa th { text-align: center; }
+.rs-mapa th:first-child { text-align: left; }
+.rs-mapa td.v { font-weight: 800; }
+.rs-mapa tr.total td { border-top: 2px solid var(--marinho); }
+.c3 { background: #dcefe4; color: #157a42; }
+.c2 { background: #fff3e2; color: #a8590f; }
+.c1 { background: #fdeceb; color: #c0392b; }
+.rs-leg-n { display: flex; flex-wrap: wrap; gap: .4rem 1rem; font-size: .74rem; color: var(--texto-suave); margin-bottom: .5rem; }
+.rs-leg-n i, .rs-dist u { display: inline-block; }
+.rs-leg-n i { width: 10px; height: 10px; border-radius: 2px; margin-right: .3rem; vertical-align: -1px; }
+.rs-dist { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 190px) 46px; gap: .8rem; align-items: center; margin: .42rem 0; font-size: .86rem; }
+.rs-dist span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-dist i { display: flex; height: 16px; border-radius: 4px; overflow: hidden; background: var(--fundo-2); }
+.rs-dist u, .rs-leg-n i { height: 100%; }
+.rs-leg-n i.a, .rs-dist u.a { background: #c0392b; }
+.rs-leg-n i.b, .rs-dist u.b { background: #f3c08f; }
+.rs-leg-n i.c, .rs-dist u.c { background: #164d74; }
+.rs-dist b { font-family: var(--fonte-titulo); text-align: center; border-radius: 6px; padding: .1rem 0; }
+.rs-email-modal { width: min(760px, calc(100% - 24px)); }
+.rs-passos { margin: 0 0 1rem; padding-left: 1.2rem; display: grid; gap: .55rem; font-size: .9rem; color: var(--texto); }
+.rs-passos kbd { padding: .05rem .35rem; border: 1px solid var(--linha); border-radius: 4px; background: var(--fundo); font-size: .8rem; }
+.rs-email-previa { border: 1px dashed var(--linha); border-radius: 12px; padding: 14px; background: #eef1f4; overflow: auto; }
+.rs-email-previa > table { margin: 0 auto; box-shadow: 0 6px 20px -12px rgba(0, 0, 0, .3); }
+@media (max-width: 700px) { .kanban.tres { grid-template-columns: repeat(3, 82vw); } .kanban.quatro { grid-template-columns: repeat(4, 82vw); } .ja-processos { grid-template-columns: 1fr; } }
